@@ -1,0 +1,15 @@
+[Unit]
+Description=Robot ROS2 Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=justin
+Environment=HOME=/home/justin
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/justin/start_robot.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

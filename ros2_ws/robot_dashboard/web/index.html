@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Robot Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: clamp(11px, 1.1vw, 16px); }
+
+    body {
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      padding: clamp(8px, 1.2vw, 20px);
+      height: 100vh;
+      display: flex;
+      gap: clamp(8px, 1vw, 16px);
+      overflow: hidden;
+    }
+
+    /* ── Columns ── */
+    .col-camera  { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .col-controls { width: clamp(200px, 20vw, 280px); display: flex; flex-direction: column; gap: clamp(8px, 0.8vw, 14px); overflow-y: auto; }
+    .col-log     { width: clamp(220px, 22vw, 340px); display: flex; flex-direction: column; }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: clamp(10px, 1vw, 16px);
+      flex-shrink: 0;
+    }
+
+    .card h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #444;
+      margin-bottom: 10px;
+    }
+
+    /* ── Camera ── */
+    #feed-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    #feed { width: 100%; flex: 1; object-fit: contain; background: #000; border-radius: 4px; display: block; min-height: 0; }
+
+    /* ── Status ── */
+    #conn { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #555; margin-bottom: 10px; }
+    #conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.3s; }
+    #conn-dot.connected    { background: #4caf50; }
+    #conn-dot.disconnected { background: #ef5350; }
+    #state-badge {
+      display: inline-block; padding: 5px 12px; border-radius: 20px;
+      font-size: 0.9rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; background: #222; color: #aaa;
+      transition: background 0.3s, color 0.3s;
+    }
+    .state-patrol   { background: #1a3a1a !important; color: #4caf50 !important; }
+    .state-approach { background: #3a2a00 !important; color: #ffa726 !important; }
+    .state-collect  { background: #1a1a3a !important; color: #42a5f5 !important; }
+    .state-deposit  { background: #1a1a3a !important; color: #42a5f5 !important; }
+    .state-fetch    { background: #2a1a3a !important; color: #ab47bc !important; }
+    .state-teleop   { background: #3a1a1a !important; color: #ef5350 !important; }
+    .state-idle     { background: #222    !important; color: #aaa    !important; }
+
+    /* ── Battery ── */
+    #bat-bar-bg { height: 4px; background: #222; border-radius: 2px; margin-top: 5px; }
+    #bat-bar { height: 4px; border-radius: 2px; width: 0%; transition: width 0.5s, background 0.5s; }
+
+    /* ── Commands ── */
+    .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button {
+      padding: 9px; border: 1px solid #333; border-radius: 6px;
+      background: #222; color: #ccc; font-size: 0.8rem; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      transition: background 0.15s, color 0.15s;
+    }
+    button:hover { background: #2e2e2e; color: #fff; }
+    button.patrol { border-color: #4caf50; } button.patrol:hover { background: #1a3a1a; color: #4caf50; }
+    button.fetch  { border-color: #ab47bc; } button.fetch:hover  { background: #2a1a3a; color: #ab47bc; }
+    button.teleop { border-color: #ef5350; } button.teleop:hover { background: #3a1a1a; color: #ef5350; }
+    button.idle   { border-color: #555;    } button.idle:hover   { background: #2a2a2a; color: #aaa;    }
+
+    /* ── Teleop dpad ── */
+    .dpad { padding: 10px 0; font-size: 1.1rem; line-height: 1; }
+    .dpad:active, .dpad.held { background: #2e2e2e; color: #ef5350; border-color: #ef5350; }
+    #teleop-speed { width: 100%; margin-top: 10px; accent-color: #ef5350; }
+
+    /* ── Detections ── */
+    #det-list { font-size: 0.8rem; color: #888; line-height: 1.9; min-height: 24px; }
+
+    /* ── Wheel speeds ── */
+    .wheel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .wheel { display: flex; flex-direction: column; gap: 4px; }
+    .wheel-label { font-size: 0.7rem; color: #555; text-transform: uppercase; }
+    .wheel-bar-bg { height: 6px; background: #222; border-radius: 3px; position: relative; }
+    .wheel-bar { height: 6px; border-radius: 3px; transition: width 0.15s, left 0.15s; position: absolute; }
+    .wheel-val { font-size: 0.75rem; color: #888; text-align: right; }
+
+    /* ── System graph ── */
+    .chart-wrap { position: relative; height: clamp(80px, 9vh, 130px); }
+    .chart-legend {
+      display: flex; gap: 14px; margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #555; }
+    .legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+    #temp-val { font-size: 0.72rem; color: #555; margin-top: 8px; }
+
+    /* ── Log column ── */
+    .col-log .card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    #log {
+      font-family: 'Courier New', monospace; font-size: 0.72rem;
+      flex: 1; overflow-y: auto; color: #555; line-height: 1.6;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .entry { padding: 2px 0; border-bottom: 1px solid #1e1e1e; }
+    .entry.warn  { color: #ffa726; }
+    .entry.error { color: #ef5350; }
+    .entry .node-name { color: #3a3a3a; }
+    .entry .ts { color: #2a2a2a; margin-right: 6px; }
+  </style>
+</head>
+<body>
+
+<!-- Column 1: Camera -->
+<div class="col-camera">
+  <div class="card" id="feed-card">
+    <h2>Camera</h2>
+    <img id="feed" src="" alt="No feed">
+  </div>
+</div>
+
+<!-- Column 2: Controls -->
+<div class="col-controls">
+
+  <div class="card">
+    <h2>Status</h2>
+    <div id="conn"><div id="conn-dot" class="disconnected"></div><span id="conn-label">Connecting…</span></div>
+    <div id="state-badge">idle</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+      <span style="font-size:0.7rem;color:#555;text-transform:uppercase;">Battery</span>
+      <span id="bat-val" style="font-size:0.85rem;font-weight:600;color:#888;">— V</span>
+    </div>
+    <div id="bat-bar-bg"><div id="bat-bar"></div></div>
+    <button onclick="eStop()" style="margin-top:10px;width:100%;background:#2a0a0a;border-color:#ef5350;color:#ef5350;font-weight:700;letter-spacing:0.08em;">&#9632; E-STOP</button>
+  </div>
+
+  <div class="card">
+    <h2>Commands</h2>
+    <div class="cmd-grid">
+      <button class="patrol" onclick="sendCmd('patrol')">Patrol</button>
+      <button class="fetch"  onclick="sendCmd('fetch')">Fetch</button>
+      <button class="teleop" onclick="sendCmd('teleop')">Teleop</button>
+      <button class="idle"   onclick="sendCmd('idle')">Idle</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Teleop <span style="font-size:0.65rem;color:#333;text-transform:none;letter-spacing:0;font-weight:400;">WASD / QE rotate</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      <button class="dpad" id="btn-q" onmousedown="dpadDown('q')" onmouseup="dpadUp('q')" onmouseleave="dpadUp('q')">&#8634;</button>
+      <button class="dpad" id="btn-w" onmousedown="dpadDown('w')" onmouseup="dpadUp('w')" onmouseleave="dpadUp('w')">&#8593;</button>
+      <button class="dpad" id="btn-e" onmousedown="dpadDown('e')" onmouseup="dpadUp('e')" onmouseleave="dpadUp('e')">&#8635;</button>
+      <button class="dpad" id="btn-a" onmousedown="dpadDown('a')" onmouseup="dpadUp('a')" onmouseleave="dpadUp('a')">&#8592;</button>
+      <div></div>
+      <button class="dpad" id="btn-d" onmousedown="dpadDown('d')" onmouseup="dpadUp('d')" onmouseleave="dpadUp('d')">&#8594;</button>
+      <div></div>
+      <button class="dpad" id="btn-s" onmousedown="dpadDown('s')" onmouseup="dpadUp('s')" onmouseleave="dpadUp('s')">&#8595;</button>
+      <div></div>
+    </div>
+    <input type="range" id="teleop-speed" min="5" max="100" step="5" value="80"
+           oninput="document.getElementById('speed-val').textContent=this.value+'%'">
+    <div style="font-size:0.7rem;color:#555;margin-top:5px;">Speed: <span id="speed-val">80%</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Vision</h2>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.7rem;color:#555;text-transform:uppercase;">FPS</span>
+        <span id="det-fps" style="font-size:1.1rem;font-weight:600;color:#4caf50;">— FPS</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.7rem;color:#555;text-transform:uppercase;">Objects</span>
+        <span id="det-count" style="font-size:1.1rem;font-weight:600;color:#e0e0e0;">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.7rem;color:#555;text-transform:uppercase;">Best Conf</span>
+        <span id="det-conf" style="font-size:1.1rem;font-weight:600;color:#e0e0e0;">—</span>
+      </div>
+      <div id="det-list" style="margin-top:10px;padding-top:10px;border-top:1px solid #222;font-size:0.8rem;color:#888;line-height:1.9;min-height:24px;">No detections</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Wheel Speeds</h2>
+    <div class="wheel-grid">
+      <div class="wheel"><div class="wheel-label">FL</div><div class="wheel-bar-bg"><div class="wheel-bar" id="bar-fl"></div></div><div class="wheel-val" id="val-fl">—</div></div>
+      <div class="wheel"><div class="wheel-label">FR</div><div class="wheel-bar-bg"><div class="wheel-bar" id="bar-fr"></div></div><div class="wheel-val" id="val-fr">—</div></div>
+      <div class="wheel"><div class="wheel-label">RL</div><div class="wheel-bar-bg"><div class="wheel-bar" id="bar-rl"></div></div><div class="wheel-val" id="val-rl">—</div></div>
+      <div class="wheel"><div class="wheel-label">RR</div><div class="wheel-bar-bg"><div class="wheel-bar" id="bar-rr"></div></div><div class="wheel-val" id="val-rr">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>System</h2>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>CPU</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#42a5f5"></div>GPU</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffa726"></div>RAM</div>
+    </div>
+    <div class="chart-wrap"><canvas id="sysChart"></canvas></div>
+    <div id="temp-val">— °C</div>
+  </div>
+
+</div>
+
+<!-- Column 3: Log -->
+<div class="col-log">
+  <div class="card">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+<script>
+  const host = window.location.hostname;
+  document.getElementById('feed').src =
+    `http://${host}:8080/stream?topic=/camera/image_raw&quality=50&rate=15`;
+
+  // ── ROS connection ──────────────────────────────────────────────────────
+  const ros = new ROSLIB.Ros({ url: `ws://${host}:9090` });
+  const connDot   = document.getElementById('conn-dot');
+  const connLabel = document.getElementById('conn-label');
+  ros.on('connection', () => { connDot.className = 'connected';    connLabel.textContent = 'Connected'; });
+  ros.on('error',      () => { connDot.className = 'disconnected'; connLabel.textContent = 'Error'; });
+  ros.on('close',      () => {
+    connDot.className = 'disconnected'; connLabel.textContent = 'Disconnected';
+    setTimeout(() => ros.connect(`ws://${host}:9090`), 3000);
+  });
+
+  // ── State ───────────────────────────────────────────────────────────────
+  const badge = document.getElementById('state-badge');
+  new ROSLIB.Topic({ ros, name: '/robot_state', messageType: 'std_msgs/String' })
+    .subscribe(msg => { badge.textContent = msg.data; badge.className = `state-${msg.data}`; });
+
+  // ── Detections ──────────────────────────────────────────────────────────
+  const COCO = {
+    0:'person',39:'bottle',40:'wine glass',41:'cup',42:'fork',43:'knife',
+    44:'spoon',45:'bowl',57:'chair',63:'laptop',67:'phone',73:'book',76:'scissors'
+  };
+  const detList = document.getElementById('det-list');
+  let detTO;
+  new ROSLIB.Topic({ ros, name: '/detections', messageType: 'vision_msgs/Detection2DArray' })
+    .subscribe(msg => {
+      clearTimeout(detTO);
+      if (!msg.detections.length) { detList.textContent = 'No detections'; return; }
+      detList.innerHTML = msg.detections.map(det => {
+        const hyp = det.results[0]?.hypothesis;
+        const cls = COCO[hyp?.class_id] ?? `cls ${hyp?.class_id}`;
+        return `<div>${cls} — ${(hyp?.score*100).toFixed(0)}%</div>`;
+      }).join('');
+      detTO = setTimeout(() => detList.textContent = 'No detections', 1000);
+
+      _detFrames++;
+      const _now = Date.now();
+      if (_now - _lastFpsTime >= 1000) {
+        document.getElementById('det-fps').textContent =
+          (_detFrames / ((_now - _lastFpsTime) / 1000)).toFixed(1) + ' FPS';
+        _detFrames = 0; _lastFpsTime = _now;
+      }
+      const _allHyps = msg.detections.flatMap(d => d.results);
+      const _best = _allHyps.reduce((a, b) =>
+        (b.hypothesis.score > (a ? a.hypothesis.score : 0) ? b : a), null);
+      document.getElementById('det-count').textContent = msg.detections.length;
+      document.getElementById('det-conf').textContent =
+        _best ? (_best.hypothesis.score * 100).toFixed(0) + '%' : '—';
+    });
+
+  // ── Vision perf tracking
+  let _detFrames = 0, _lastFpsTime = Date.now();
+
+  // ── Wheel speeds ────────────────────────────────────────────────────────
+  function updateWheel(id, val) {
+    const half = Math.abs(val) * 50;  // max 50% so bar stays within container
+    const bar = document.getElementById(`bar-${id}`);
+    // Sync left+width so both transition together
+    bar.style.left  = val >= 0 ? '50%' : (50 - half) + '%';
+    bar.style.width = half + '%';
+    // Only update colour on non-zero so bar keeps its colour while shrinking
+    if (val > 0)      bar.style.background = '#4caf50';
+    else if (val < 0) bar.style.background = '#ef5350';
+    document.getElementById(`val-${id}`).textContent =
+      val === 0 ? '—' : (val > 0 ? '+' : '') + (val * 100).toFixed(0) + '%';
+  }
+  new ROSLIB.Topic({ ros, name: '/wheel_speeds', messageType: 'std_msgs/Float32MultiArray' })
+    .subscribe(msg => ['fl','fr','rl','rr'].forEach((id,i) => updateWheel(id, msg.data[i]??0)));
+
+  // ── System stats chart ──────────────────────────────────────────────────
+  const HISTORY = 60;
+  const labels  = Array(HISTORY).fill('');
+  const mkData  = (color) => ({
+    data: Array(HISTORY).fill(null),
+    borderColor: color, backgroundColor: color + '22',
+    borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
+  });
+
+  const chart = new Chart(document.getElementById('sysChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [mkData('#4caf50'), mkData('#42a5f5'), mkData('#ffa726')],
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          min: 0, max: 100,
+          ticks: { color: '#444', font: { size: 9 }, stepSize: 25 },
+          grid:  { color: '#222' },
+          border: { display: false },
+        },
+      },
+    },
+  });
+
+  function pushChart(cpu, gpu, ram) {
+    [cpu, gpu, ram].forEach((v, i) => {
+      chart.data.datasets[i].data.push(v);
+      if (chart.data.datasets[i].data.length > HISTORY)
+        chart.data.datasets[i].data.shift();
+    });
+    chart.update('none');
+  }
+
+  new ROSLIB.Topic({ ros, name: '/system_stats', messageType: 'std_msgs/String' })
+    .subscribe(msg => {
+      const s = JSON.parse(msg.data);
+      pushChart(s.cpu, s.gpu, s.ram);
+      document.getElementById('temp-val').textContent = s.temp.toFixed(1) + ' °C';
+    });
+
+  // ── cmd_vel publisher ───────────────────────────────────────────────────
+  const cmdVelPub = new ROSLIB.Topic({
+    ros, name: '/cmd_vel_teleop', messageType: 'geometry_msgs/Twist' });
+
+  function publishTwist(vx, vy, wz) {
+    cmdVelPub.publish(new ROSLIB.Message({
+      linear:  { x: vx, y: vy, z: 0 },
+      angular: { x: 0,  y: 0,  z: wz }
+    }));
+  }
+
+  // ── Teleop keyboard + dpad ──────────────────────────────────────────────
+  const heldKeys = new Set();
+
+  document.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (['w','a','s','d','q','e'].includes(k)) { heldKeys.add(k); e.preventDefault(); if (heldKeys.size === 1) sendCmd('teleop'); }
+  });
+  document.addEventListener('keyup', e => {
+    heldKeys.delete(e.key.toLowerCase());
+    if (!heldKeys.size) publishTwist(0, 0, 0);
+  });
+
+  function dpadDown(k) { if (!heldKeys.size) sendCmd('teleop');
+    heldKeys.add(k);
+    const b = document.getElementById('btn-' + k);
+    if (b) b.classList.add('held');
+  }
+  function dpadUp(k) {
+    heldKeys.delete(k);
+    const b = document.getElementById('btn-' + k);
+    if (b) b.classList.remove('held');
+    if (!heldKeys.size) publishTwist(0, 0, 0);
+  }
+
+  setInterval(() => {
+    if (!heldKeys.size) return;
+    const spd = parseFloat(document.getElementById('teleop-speed').value) / 100 * 0.5;
+    let vx = 0, vy = 0, wz = 0;
+    if (heldKeys.has('w')) vx += spd;
+    if (heldKeys.has('s')) vx -= spd;
+    if (heldKeys.has('a')) vy += spd;
+    if (heldKeys.has('d')) vy -= spd;
+    if (heldKeys.has('q')) wz += spd;
+    if (heldKeys.has('e')) wz -= spd;
+    publishTwist(vx, vy, wz);
+  }, 100);
+
+  // ── E-stop ──────────────────────────────────────────────────────────────
+  function eStop() {
+    publishTwist(0, 0, 0);
+    cmdPub.publish(new ROSLIB.Message({ data: 'idle' }));
+  }
+
+  // ── Battery voltage ─────────────────────────────────────────────────────
+  new ROSLIB.Topic({ ros, name: '/battery_voltage', messageType: 'std_msgs/Float32' })
+    .subscribe(msg => {
+      const v = msg.data;
+      const pct = Math.min(100, Math.max(0, (v - 9.9) / (12.6 - 9.9) * 100));
+      const color = pct > 50 ? '#4caf50' : pct > 20 ? '#ffa726' : '#ef5350';
+      document.getElementById('bat-val').textContent = v.toFixed(2) + ' V';
+      document.getElementById('bat-val').style.color = color;
+      const bar = document.getElementById('bat-bar');
+      bar.style.width = pct + '%';
+      bar.style.background = color;
+    });
+
+  // ── Log ─────────────────────────────────────────────────────────────────
+  const logEl = document.getElementById('log');
+  const LEVELS = { 10:'debug', 20:'info', 30:'warn', 40:'error', 50:'error' };
+  const IGNORE = ['rosbridge', 'web_video_server', 'yolo_detector'];
+
+  new ROSLIB.Topic({ ros, name: '/rosout', messageType: 'rcl_interfaces/msg/Log' })
+    .subscribe(msg => {
+      if (IGNORE.some(n => msg.name.includes(n))) return;
+      if (msg.level < 20) return;
+      const level = LEVELS[msg.level] || 'info';
+      const time  = new Date().toTimeString().slice(0,8);
+      const el    = document.createElement('div');
+      el.className = `entry ${level}`;
+      el.innerHTML =
+        `<span class="ts">${time}</span>` +
+        `<span class="node-name">[${msg.name}]</span> ${msg.msg}`;
+      logEl.appendChild(el);
+      logEl.scrollTop = logEl.scrollHeight;
+      while (logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
+    });
+
+  // ── Commands ────────────────────────────────────────────────────────────
+  const cmdPub = new ROSLIB.Topic({ ros, name: '/state_cmd', messageType: 'std_msgs/String' });
+  function sendCmd(cmd) { cmdPub.publish(new ROSLIB.Message({ data: cmd })); }
+</script>
+</body>
+</html>
