@@ -1,0 +1,44 @@
+{
+  "projects": {
+    "zephyr": {
+      "rel_path": "zephyr",
+      "name": "zephyr",
+      "buildConfigs": {
+        "build/nucleo_l476rg": {
+          "relBoardSubDir": "st/nucleo_l476rg",
+          "board": "nucleo_l476rg",
+          "name": "build/nucleo_l476rg",
+          "westBuildArgs": [],
+          "westBuildCMakeArgs": [
+            "-DCONFIG_SPEED_OPTIMIZATIONS=y"
+          ],
+          "debugOptimization": "Speed",
+          "confFiles": {
+            "config": [],
+            "overlay": []
+          },
+          "launchTarget": "Zephyr IDE: Debug",
+          "buildDebugTarget": "Zephyr IDE: Debug",
+          "attachTarget": "Zephyr IDE: Attach",
+          "runnerConfigs": {
+            "default": {
+              "runner": "default",
+              "name": "default",
+              "args": ""
+            }
+          }
+        }
+      },
+      "twisterConfigs": {},
+      "confFiles": {
+        "config": [
+          {
+            "path": "zephyr/prj.conf",
+            "extra": false
+          }
+        ],
+        "overlay": []
+      }
+    }
+  }
+}
