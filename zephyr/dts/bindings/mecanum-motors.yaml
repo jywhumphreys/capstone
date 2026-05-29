@@ -1,0 +1,15 @@
+description: |
+  Mecanum drivetrain motor mapping. Groups the four wheel PWM channels and
+  their direction GPIOs in one node, in FL, FR, RL, RR order.
+
+compatible: "capstone,mecanum-motors"
+
+properties:
+  pwms:
+    type: phandle-array
+    required: true
+    description: PWM speed channel for each wheel (FL, FR, RL, RR).
+  dir-gpios:
+    type: phandle-array
+    required: true
+    description: Direction GPIO for each wheel (FL, FR, RL, RR).
