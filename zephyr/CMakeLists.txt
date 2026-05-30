@@ -7,4 +7,5 @@ target_sources(app PRIVATE
  src/main.c
  src/comms.c
  src/motors.c
+ src/gripper.c
 )

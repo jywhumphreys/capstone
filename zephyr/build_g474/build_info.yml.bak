@@ -1,0 +1,5 @@
+west:
+  command: C:\Users\justin\zephyrproject\.venv\Scripts\west build -b nucleo_g474re
+    -p auto -d build_g474 .
+  topdir: C:\Users\justin\zephyrproject
+  version: 1.5.0

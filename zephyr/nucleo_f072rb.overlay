@@ -1,0 +1,85 @@
+/*
+ * Mecanum drivetrain + gripper overlay for the Nucleo-F072RB.
+ *
+ *   PWM (speed)                         DIR (direction)
+ *   ------------------------------      ----------------
+ *   PA0  TIM2_CH1   front-left          PC0  front-left
+ *   PA1  TIM2_CH2   front-right         PC1  front-right
+ *   PB0  TIM3_CH3   back-left           PC2  back-left
+ *   PB1  TIM3_CH4   back-right          PC3  back-right
+ *   PA8  TIM1_CH1   gripper servo
+ *
+ * NOTE vs the L476/G474 versions: the STM32F0 has no TIM4, and PB7 has no
+ * usable normal PWM channel, so the back-right motor moved from PB7/TIM4_CH2
+ * to PB1/TIM3_CH4 (same timer as the back-left wheel). Rewire that one PWM
+ * lead from PB7 to PB1.
+ *
+ * Core runs at 48 MHz. st,prescaler = 0 keeps the full timer clock; at the
+ * 20 kHz (50 us) motor PWM period that is ~2400 counts, well within range.
+ * The F072 board dts leaves these timers disabled and unlabeled, so each PWM
+ * child is enabled and labeled here.
+ */
+
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+&timers2 {
+	st,prescaler = <0>;
+	status = "okay";
+
+	pwm2: pwm {
+		status = "okay";
+		/* CH1 = PA0 (front-left), CH2 = PA1 (front-right) */
+		pinctrl-0 = <&tim2_ch1_pa0 &tim2_ch2_pa1>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers3 {
+	st,prescaler = <0>;
+	status = "okay";
+
+	pwm3: pwm {
+		status = "okay";
+		/* CH3 = PB0 (back-left), CH4 = PB1 (back-right) */
+		pinctrl-0 = <&tim3_ch3_pb0 &tim3_ch4_pb1>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers1 {
+	/* TIM1 is a 16-bit timer. At 48 MHz a /48 prescaler gives a 1 MHz tick,
+	 * so a 20 ms (50 Hz) servo frame is 20000 counts — fits the counter and
+	 * gives 1 us pulse resolution. */
+	st,prescaler = <47>;
+	status = "okay";
+
+	pwm1: pwm {
+		status = "okay";
+		/* CH1 = PA8 (gripper servo) */
+		pinctrl-0 = <&tim1_ch1_pa8>;
+		pinctrl-names = "default";
+	};
+};
+
+/ {
+	motors: motors {
+		compatible = "capstone,mecanum-motors";
+		/* Order: FL, FR, RL, RR. <&controller channel period flags> */
+		pwms = <&pwm2 1 PWM_USEC(50) PWM_POLARITY_NORMAL>,  /* FL  PA0 */
+		       <&pwm2 2 PWM_USEC(50) PWM_POLARITY_NORMAL>,  /* FR  PA1 */
+		       <&pwm3 3 PWM_USEC(50) PWM_POLARITY_NORMAL>,  /* RL  PB0 */
+		       <&pwm3 4 PWM_USEC(50) PWM_POLARITY_NORMAL>;  /* RR  PB1 */
+
+		dir-gpios = <&gpioc 0 GPIO_ACTIVE_HIGH>,  /* FL  PC0 */
+			    <&gpioc 1 GPIO_ACTIVE_HIGH>,  /* FR  PC1 */
+			    <&gpioc 2 GPIO_ACTIVE_HIGH>,  /* RL  PC2 */
+			    <&gpioc 3 GPIO_ACTIVE_HIGH>;  /* RR  PC3 */
+	};
+
+	gripper: gripper {
+		compatible = "capstone,gripper";
+		/* PA8 TIM1_CH1, 20 ms (50 Hz) servo frame. */
+		pwms = <&pwm1 1 PWM_USEC(20000) PWM_POLARITY_NORMAL>;
+	};
+};

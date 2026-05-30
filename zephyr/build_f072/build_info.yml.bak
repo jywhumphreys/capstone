@@ -1,0 +1,5 @@
+west:
+  command: C:\Users\justin\zephyrproject\.venv\Scripts\west build -b nucleo_f072rb
+    -p auto -d build_f072 .
+  topdir: C:\Users\justin\zephyrproject
+  version: 1.5.0

@@ -1,0 +1,63 @@
+cmake:
+  application:
+    configuration-dir: 'C:/Users/justin/Documents/capstone/zephyr'
+    source-dir: 'C:/Users/justin/Documents/capstone/zephyr'
+  board:
+    name: 'nucleo_g474re'
+    path:
+     - 'C:/Users/justin/zephyrproject/zephyr/boards/st/nucleo_g474re'
+    qualifiers: 'stm32g474xx'
+    revision: ''
+  devicetree:
+    bindings-dirs:
+     - 'C:/Users/justin/Documents/capstone/zephyr/dts/bindings'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/bindings'
+    files:
+     - 'C:/Users/justin/zephyrproject/zephyr/boards/st/nucleo_g474re/nucleo_g474re.dts'
+     - 'C:/Users/justin/Documents/capstone/zephyr/nucleo_g474re.overlay'
+    include-dirs:
+     - 'C:/Users/justin/Documents/capstone/zephyr/dts'
+     - 'C:/Users/justin/zephyrproject/modules/hal/ambiq/dts'
+     - 'C:/Users/justin/zephyrproject/modules/hal/atmel/include'
+     - 'C:/Users/justin/zephyrproject/modules/hal/bouffalolab/include'
+     - 'C:/Users/justin/zephyrproject/modules/hal/bouffalolab/include/zephyr'
+     - 'C:/Users/justin/zephyrproject/modules/hal/gigadevice/include'
+     - 'C:/Users/justin/zephyrproject/modules/hal/microchip/include'
+     - 'C:/Users/justin/zephyrproject/modules/hal/microchip/dts'
+     - 'C:/Users/justin/zephyrproject/modules/hal/nuvoton/dts'
+     - 'C:/Users/justin/zephyrproject/modules/hal/nxp/dts'
+     - 'C:/Users/justin/zephyrproject/modules/hal/stm32/dts'
+     - 'C:/Users/justin/zephyrproject/modules/hal/ti/dts'
+     - 'C:/Users/justin/zephyrproject/zephyr/include'
+     - 'C:/Users/justin/zephyrproject/zephyr/include/zephyr'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/common'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/vendor'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/rx'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/x86'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/xtensa'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/sparc'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/riscv'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/posix'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/arm64'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/arm'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts/arc'
+     - 'C:/Users/justin/zephyrproject/zephyr/dts'
+    user-files:
+     - 'C:/Users/justin/Documents/capstone/zephyr/nucleo_g474re.overlay'
+  kconfig:
+    files:
+     - 'C:/Users/justin/zephyrproject/zephyr/boards/st/nucleo_g474re/nucleo_g474re_defconfig'
+     - 'C:/Users/justin/Documents/capstone/zephyr/prj.conf'
+    user-files:
+     - 'C:/Users/justin/Documents/capstone/zephyr/prj.conf'
+  toolchain:
+    name: 'zephyr'
+    path: 'C:/Users/justin/zephyr-sdk-1.0.1'
+  zephyr:
+    version: '4.4.99'
+    zephyr-base: 'C:/Users/justin/zephyrproject/zephyr'
+version: '0.1.0'
+west:
+  command: 'C:\Users\justin\zephyrproject\.venv\Scripts\west build -b nucleo_g474re -p auto -d build_g474 .'
+  topdir: 'C:\Users\justin\zephyrproject'
+  version: '1.5.0'

@@ -54,6 +54,21 @@
 	};
 };
 
+&timers1 {
+	/* TIM1 is a 16-bit timer. A /80 prescaler gives a 1 MHz tick, so a
+	 * 20 ms (50 Hz) servo frame is 20000 counts — fits the counter and
+	 * gives 1 us pulse resolution. */
+	st,prescaler = <79>;
+	status = "okay";
+
+	pwm1: pwm {
+		status = "okay";
+		/* CH1 = PA8 (gripper servo) */
+		pinctrl-0 = <&tim1_ch1_pa8>;
+		pinctrl-names = "default";
+	};
+};
+
 / {
 	motors: motors {
 		compatible = "capstone,mecanum-motors";
@@ -67,5 +82,11 @@
 			    <&gpioc 1 GPIO_ACTIVE_HIGH>,  /* FR  PC1 */
 			    <&gpioc 2 GPIO_ACTIVE_HIGH>,  /* RL  PC2 */
 			    <&gpioc 3 GPIO_ACTIVE_HIGH>;  /* RR  PC3 */
+	};
+
+	gripper: gripper {
+		compatible = "capstone,gripper";
+		/* PA8 TIM1_CH1, 20 ms (50 Hz) servo frame. */
+		pwms = <&pwm1 1 PWM_USEC(20000) PWM_POLARITY_NORMAL>;
 	};
 };

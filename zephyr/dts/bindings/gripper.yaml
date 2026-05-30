@@ -1,0 +1,9 @@
+description: Gripper servo driven by a single PWM channel.
+
+compatible: "capstone,gripper"
+
+properties:
+  pwms:
+    type: phandle-array
+    required: true
+    description: PWM channel wired to the servo signal line.
