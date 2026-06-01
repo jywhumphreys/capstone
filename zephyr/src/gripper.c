@@ -17,7 +17,7 @@ static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(GRIPPER_NODE);
  * The gripper binds past these, so positions are hard-clamped to this band —
  * lower = more open. Never command outside [GRIPPER_OPEN, GRIPPER_CLOSED]. */
 #define GRIPPER_OPEN    10   /* max open   */
-#define GRIPPER_CLOSED  60   /* max closed */
+#define GRIPPER_CLOSED  30   /* max closed */
 
 int gripper_init(void)
 {

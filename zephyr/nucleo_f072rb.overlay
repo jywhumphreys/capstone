@@ -62,6 +62,15 @@
 	};
 };
 
+&usart3 {
+	/* Hiwonder HTD-45H serial bus servos. TX (PB10) and RX (PB11) are tied
+	 * together externally (1k on TX) for half-duplex on a single data wire. */
+	pinctrl-0 = <&usart3_tx_pb10 &usart3_rx_pb11>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
 / {
 	motors: motors {
 		compatible = "capstone,mecanum-motors";

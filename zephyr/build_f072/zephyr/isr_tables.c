@@ -7,7 +7,8 @@
 #include <zephyr/arch/cpu.h>
 
 typedef void (* ISR)(const void *);
-const uintptr_t __irq_vector_table _irq_vector_table[29] = {
+const uintptr_t __irq_vector_table _irq_vector_table[30] = {
+	((uintptr_t)&_isr_wrapper),
 	((uintptr_t)&_isr_wrapper),
 	((uintptr_t)&_isr_wrapper),
 	((uintptr_t)&_isr_wrapper),
@@ -39,15 +40,15 @@ const uintptr_t __irq_vector_table _irq_vector_table[29] = {
 	((uintptr_t)&_isr_wrapper),
 };
 
-const struct _isr_table_entry __sw_isr_table _sw_isr_table[29] = {
+const struct _isr_table_entry __sw_isr_table _sw_isr_table[30] = {
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 0 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 1 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 2 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 3 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 4 */
-	{(const void *)0x8004412, (ISR)0x8000e0d}, /* 5 */
-	{(const void *)0x8004410, (ISR)0x8000e0d}, /* 6 */
-	{(const void *)0x800440e, (ISR)0x8000e0d}, /* 7 */
+	{(const void *)0x8004e61, (ISR)0x80015f1}, /* 5 */
+	{(const void *)0x8004e5f, (ISR)0x80015f1}, /* 6 */
+	{(const void *)0x8004e5d, (ISR)0x80015f1}, /* 7 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 8 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 9 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 10 */
@@ -67,6 +68,7 @@ const struct _isr_table_entry __sw_isr_table _sw_isr_table[29] = {
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 24 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 25 */
 	{(const void *)0x0, (ISR)z_irq_spurious}, /* 26 */
-	{(const void *)0x8003bb8, (ISR)0x8003609}, /* 27 */
-	{(const void *)0x8003b9c, (ISR)0x8003609}, /* 28 */
+	{(const void *)0x8004590, (ISR)0x8003f83}, /* 27 */
+	{(const void *)0x8004574, (ISR)0x8003f83}, /* 28 */
+	{(const void *)0x8004558, (ISR)0x8003f83}, /* 29 */
 };

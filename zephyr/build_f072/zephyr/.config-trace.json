@@ -559,7 +559,7 @@
     "CONFIG_NUM_IRQS",
     "n",
     "int",
-    "29",
+    "30",
     "default",
     [
       "C:/Users/justin/zephyrproject/zephyr/soc/st/stm32/Kconfig.defconfig",

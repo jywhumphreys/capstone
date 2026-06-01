@@ -9,4 +9,5 @@ target_sources(app PRIVATE
  src/motors.c
  src/gripper.c
  src/hopper.c
+ src/servo.c
 )
