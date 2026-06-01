@@ -10,7 +10,6 @@
 
 #define SERVO_HEADER  0x55u
 
-/* Commands */
 #define CMD_MOVE         1u
 #define CMD_MOVE_WAIT    7u
 #define CMD_MOVE_START   11u
@@ -19,17 +18,15 @@
 #define CMD_POS_READ     28u
 #define CMD_LOAD_UNLOAD  31u
 
-/* 0..240 deg maps to 0..1000 ticks. */
+// 0..240 deg <-> 0..1000 ticks
 #define DEG_TO_TICKS(d)  ((int)((d) * 1000.0f / 240.0f))
 #define TICKS_TO_DEG(t)  ((t) * 240.0f / 1000.0f)
 
-/* Per-byte receive timeout (ms). One byte at 115200 is ~87 us; this is a
- * generous wait for the servo to start/continue replying. */
-#define RX_BYTE_TIMEOUT_MS  50
+#define RX_BYTE_TIMEOUT_MS  50   // one byte at 115200 is ~87us; generous
 
 static const struct device *const uart = DEVICE_DT_GET(SERVO_UART_NODE);
 
-/* ISR (producer) -> thread (consumer) single-producer/single-consumer. */
+// isr fills, thread drains (single producer / single consumer)
 RING_BUF_DECLARE(servo_rx_rb, 64);
 
 static void servo_rx_isr(const struct device *dev, void *user_data)
@@ -59,7 +56,7 @@ int servo_init(void)
     return 0;
 }
 
-/* Pull one byte from the RX ring buffer, waiting up to RX_BYTE_TIMEOUT_MS. */
+// one byte from the rx ring buffer, waiting up to RX_BYTE_TIMEOUT_MS
 static int rx_byte(uint8_t *b)
 {
     uint32_t start = k_uptime_get_32();
@@ -77,7 +74,7 @@ static int rx_byte(uint8_t *b)
 void servo_send(uint8_t id, uint8_t cmd, uint8_t *params, uint8_t param_len)
 {
     uint8_t buf[16];
-    uint8_t len = param_len + 3u;   /* LENGTH = num_params + 3 */
+    uint8_t len = param_len + 3u;   // len = num_params + 3
 
     buf[0] = SERVO_HEADER;
     buf[1] = SERVO_HEADER;
@@ -88,16 +85,16 @@ void servo_send(uint8_t id, uint8_t cmd, uint8_t *params, uint8_t param_len)
         buf[5 + i] = params[i];
     }
 
-    /* CHECKSUM = ~(ID + LENGTH + CMD + sum(params)) & 0xFF */
+    // checksum = ~(id + len + cmd + sum(params))
     uint16_t sum = 0;
     for (uint8_t i = 2; i < (uint8_t)(len + 2u); i++) {
         sum += buf[i];
     }
     buf[5 + param_len] = (uint8_t)(~sum);
 
-    uint8_t total = param_len + 6u;   /* header(2)+id+len+cmd+params+checksum */
+    uint8_t total = param_len + 6u;   // header(2) + id + len + cmd + params + chk
 
-    /* Half-duplex: clear stale RX, transmit, then swallow our own echo. */
+    // half-duplex: clear rx, send, then swallow our own echo
     ring_buf_reset(&servo_rx_rb);
     for (uint8_t i = 0; i < total; i++) {
         uart_poll_out(uart, buf[i]);
@@ -108,14 +105,13 @@ void servo_send(uint8_t id, uint8_t cmd, uint8_t *params, uint8_t param_len)
     }
 }
 
-/* Read a response packet into params[]. Returns num params, or negative on
- * timeout / framing / checksum error. */
+// read a response into params[]. returns num params, or <0 on timeout/bad frame
 static int servo_read_response(uint8_t *params, uint8_t max_params)
 {
     uint8_t b, id, len, cmd;
     int sync = 0;
 
-    /* Sync on 0x55 0x55. */
+    // sync on 0x55 0x55
     while (sync < 2) {
         if (rx_byte(&b) != 0) {
             return -ETIMEDOUT;

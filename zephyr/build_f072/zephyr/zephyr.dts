@@ -305,31 +305,31 @@
 			/* node '/soc/pin-controller@48000000/tim1_ch1_pa8' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:671 */
 			tim1_ch1_pa8: tim1_ch1_pa8 {
 				pinmux = < 0x102 >; /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:672 */
-				phandle = < 0xd >;  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:60 */
+				phandle = < 0xd >;  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:51 */
 			};
 
 			/* node '/soc/pin-controller@48000000/tim2_ch1_pa0' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:707 */
 			tim2_ch1_pa0: tim2_ch1_pa0 {
 				pinmux = < 0x2 >;   /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:708 */
-				phandle = < 0x11 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:33 */
+				phandle = < 0x11 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:28 */
 			};
 
 			/* node '/soc/pin-controller@48000000/tim2_ch2_pa1' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:711 */
 			tim2_ch2_pa1: tim2_ch2_pa1 {
 				pinmux = < 0x22 >;  /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:712 */
-				phandle = < 0x12 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:33 */
+				phandle = < 0x12 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:28 */
 			};
 
 			/* node '/soc/pin-controller@48000000/tim3_ch3_pb0' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:751 */
 			tim3_ch3_pb0: tim3_ch3_pb0 {
 				pinmux = < 0x201 >; /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:752 */
-				phandle = < 0xe >;  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:45 */
+				phandle = < 0xe >;  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:39 */
 			};
 
 			/* node '/soc/pin-controller@48000000/tim3_ch4_pb1' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:755 */
 			tim3_ch4_pb1: tim3_ch4_pb1 {
 				pinmux = < 0x221 >; /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:756 */
-				phandle = < 0xf >;  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:45 */
+				phandle = < 0xf >;  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:39 */
 			};
 
 			/* node '/soc/pin-controller@48000000/usart1_rx_pa10' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:1042 */
@@ -347,7 +347,7 @@
 			/* node '/soc/pin-controller@48000000/usart3_rx_pb11' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:1058 */
 			usart3_rx_pb11: usart3_rx_pb11 {
 				pinmux = < 0x364 >; /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:1059 */
-				phandle = < 0x1b >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:68 */
+				phandle = < 0x1b >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:58 */
 			};
 
 			/* node '/soc/pin-controller@48000000/usart1_tx_pa9' defined in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:1080 */
@@ -368,7 +368,7 @@
 			usart3_tx_pb10: usart3_tx_pb10 {
 				pinmux = < 0x344 >; /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:1101 */
 				bias-pull-up;       /* in modules\hal\stm32\dts\st\f0\stm32f072r(8-b)tx-pinctrl.dtsi:1102 */
-				phandle = < 0x1a >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:68 */
+				phandle = < 0x1a >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:58 */
 			};
 		};
 
@@ -466,17 +466,17 @@
 			             < 0xe 0x0 >;           /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:269 */
 			interrupt-names = "brk_up_trg_com",
 			                  "cc";             /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:270 */
-			st,prescaler = < 0x2f >;            /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:54 */
-			status = "okay";                    /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:55 */
+			st,prescaler = < 0x2f >;            /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:46 */
+			status = "okay";                    /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:47 */
 
 			/* node '/soc/timers@40012c00/pwm' defined in zephyr\dts\arm\st\f0\stm32f0.dtsi:274 */
 			pwm1: pwm {
 				compatible = "st,stm32-pwm";   /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:275 */
 				#pwm-cells = < 0x3 >;          /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:277 */
-				status = "okay";               /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:58 */
-				pinctrl-0 = < &tim1_ch1_pa8 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:60 */
-				pinctrl-names = "default";     /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:61 */
-				phandle = < 0x2a >;            /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:92 */
+				status = "okay";               /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:50 */
+				pinctrl-0 = < &tim1_ch1_pa8 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:51 */
+				pinctrl-names = "default";     /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:52 */
+				phandle = < 0x2a >;            /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:81 */
 			};
 
 			/* node '/soc/timers@40012c00/counter' defined in zephyr\dts\arm\st\f0\stm32f0.dtsi:280 */
@@ -495,17 +495,17 @@
 			resets = < &rctl 0x201 >;       /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:291 */
 			interrupts = < 0x10 0x0 >;      /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:292 */
 			interrupt-names = "global";     /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:293 */
-			st,prescaler = < 0x0 >;         /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:39 */
-			status = "okay";                /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:40 */
+			st,prescaler = < 0x0 >;         /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:34 */
+			status = "okay";                /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:35 */
 
 			/* node '/soc/timers@40000400/pwm' defined in zephyr\dts\arm\st\f0\stm32f0.dtsi:297 */
 			pwm3: pwm {
 				compatible = "st,stm32-pwm";                 /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:298 */
 				#pwm-cells = < 0x3 >;                        /* in zephyr\dts\arm\st\f0\stm32f0.dtsi:300 */
-				status = "okay";                             /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:43 */
-				pinctrl-0 = < &tim3_ch3_pb0 &tim3_ch4_pb1 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:45 */
-				pinctrl-names = "default";                   /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:46 */
-				phandle = < 0x29 >;                          /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:78 */
+				status = "okay";                             /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:38 */
+				pinctrl-0 = < &tim3_ch3_pb0 &tim3_ch4_pb1 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:39 */
+				pinctrl-names = "default";                   /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:40 */
+				phandle = < 0x29 >;                          /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:68 */
 			};
 
 			/* node '/soc/timers@40000400/counter' defined in zephyr\dts\arm\st\f0\stm32f0.dtsi:303 */
@@ -645,17 +645,17 @@
 			resets = < &rctl 0x200 >;       /* in zephyr\dts\arm\st\f0\stm32f031.dtsi:18 */
 			interrupts = < 0xf 0x0 >;       /* in zephyr\dts\arm\st\f0\stm32f031.dtsi:19 */
 			interrupt-names = "global";     /* in zephyr\dts\arm\st\f0\stm32f031.dtsi:20 */
-			st,prescaler = < 0x0 >;         /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:27 */
-			status = "okay";                /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:28 */
+			st,prescaler = < 0x0 >;         /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:23 */
+			status = "okay";                /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:24 */
 
 			/* node '/soc/timers@40000000/pwm' defined in zephyr\dts\arm\st\f0\stm32f031.dtsi:24 */
 			pwm2: pwm {
 				compatible = "st,stm32-pwm";                 /* in zephyr\dts\arm\st\f0\stm32f031.dtsi:25 */
 				#pwm-cells = < 0x3 >;                        /* in zephyr\dts\arm\st\f0\stm32f031.dtsi:27 */
-				status = "okay";                             /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:31 */
-				pinctrl-0 = < &tim2_ch1_pa0 &tim2_ch2_pa1 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:33 */
-				pinctrl-names = "default";                   /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:34 */
-				phandle = < 0x28 >;                          /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:78 */
+				status = "okay";                             /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:27 */
+				pinctrl-0 = < &tim2_ch1_pa0 &tim2_ch2_pa1 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:28 */
+				pinctrl-names = "default";                   /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:29 */
+				phandle = < 0x28 >;                          /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:68 */
 			};
 
 			/* node '/soc/timers@40000000/counter' defined in zephyr\dts\arm\st\f0\stm32f031.dtsi:30 */
@@ -772,10 +772,10 @@
 			clocks = < &rcc 0x1c 0x40000 >;                  /* in zephyr\dts\arm\st\f0\stm32f071.dtsi:50 */
 			resets = < &rctl 0x212 >;                        /* in zephyr\dts\arm\st\f0\stm32f071.dtsi:51 */
 			interrupts = < 0x1d 0x0 >;                       /* in zephyr\dts\arm\st\f0\stm32f071.dtsi:52 */
-			pinctrl-0 = < &usart3_tx_pb10 &usart3_rx_pb11 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:68 */
-			pinctrl-names = "default";                       /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:69 */
-			current-speed = < 0x1c200 >;                     /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:70 */
-			status = "okay";                                 /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:71 */
+			pinctrl-0 = < &usart3_tx_pb10 &usart3_rx_pb11 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:58 */
+			pinctrl-names = "default";                       /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:59 */
+			current-speed = < 0x1c200 >;                     /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:60 */
+			status = "okay";                                 /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:61 */
 		};
 
 		/* node '/soc/serial@40004c00' defined in zephyr\dts\arm\st\f0\stm32f071.dtsi:56 */
@@ -1101,29 +1101,29 @@
 		};
 	};
 
-	/* node '/motors' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:75 */
+	/* node '/motors' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:65 */
 	motors: motors {
-		compatible = "capstone,mecanum-motors"; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:76 */
+		compatible = "capstone,mecanum-motors"; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:66 */
 		pwms = < &pwm2 0x1 0xc350 0x0 >,
 		       < &pwm2 0x2 0xc350 0x0 >,
 		       < &pwm3 0x3 0xc350 0x0 >,
-		       < &pwm3 0x4 0xc350 0x0 >;        /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:78 */
+		       < &pwm3 0x4 0xc350 0x0 >;        /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:68 */
 		dir-gpios = < &gpioc 0x0 0x0 >,
 		            < &gpioc 0x1 0x0 >,
 		            < &gpioc 0x2 0x0 >,
-		            < &gpioc 0x3 0x0 >;         /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:83 */
+		            < &gpioc 0x3 0x0 >;         /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:73 */
 	};
 
-	/* node '/gripper' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:89 */
+	/* node '/gripper' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:79 */
 	gripper: gripper {
-		compatible = "capstone,gripper";    /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:90 */
-		pwms = < &pwm1 0x1 0x1312d00 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:92 */
+		compatible = "capstone,gripper";    /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:80 */
+		pwms = < &pwm1 0x1 0x1312d00 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:81 */
 	};
 
-	/* node '/hopper' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:95 */
+	/* node '/hopper' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:84 */
 	hopper: hopper {
-		compatible = "capstone,hopper";  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:96 */
-		ain1-gpios = < &gpiob 0x8 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:98 */
-		ain2-gpios = < &gpiob 0x9 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:99 */
+		compatible = "capstone,hopper";  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:85 */
+		ain1-gpios = < &gpiob 0x8 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:87 */
+		ain2-gpios = < &gpiob 0x9 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:88 */
 	};
 };

@@ -7,7 +7,7 @@
 
 #define MOTORS_NODE DT_NODELABEL(motors)
 
-/* PWM channels, indexed by motor_id_t (period comes from the overlay). */
+// pwm channels, indexed by motor_id_t (period set in the overlay)
 static const struct pwm_dt_spec motor_pwm[MOTOR_COUNT] = {
     PWM_DT_SPEC_GET_BY_IDX(MOTORS_NODE, 0),
     PWM_DT_SPEC_GET_BY_IDX(MOTORS_NODE, 1),
@@ -15,7 +15,7 @@ static const struct pwm_dt_spec motor_pwm[MOTOR_COUNT] = {
     PWM_DT_SPEC_GET_BY_IDX(MOTORS_NODE, 3),
 };
 
-/* DIR GPIOs, indexed by motor_id_t. */
+// dir pins, indexed by motor_id_t
 static const struct gpio_dt_spec motor_dir[MOTOR_COUNT] = {
     GPIO_DT_SPEC_GET_BY_IDX(MOTORS_NODE, dir_gpios, 0),
     GPIO_DT_SPEC_GET_BY_IDX(MOTORS_NODE, dir_gpios, 1),
@@ -23,14 +23,13 @@ static const struct gpio_dt_spec motor_dir[MOTOR_COUNT] = {
     GPIO_DT_SPEC_GET_BY_IDX(MOTORS_NODE, dir_gpios, 3),
 };
 
-/* The right-hand wheels are mounted mirror-image to the left, so a positive
- * ("forward") command must drive their DIR pin to the opposite level. Flip
- * these entries to match your wiring/gearing if a wheel spins backwards. */
+// right wheels are mounted mirrored, so positive = forward needs the opposite
+// dir level. flip an entry if a wheel spins the wrong way
 static const bool motor_invert[MOTOR_COUNT] = {
-    false,  /* FL */
-    true,   /* FR */
-    false,  /* RL */
-    true,   /* RR */
+    false,  // FL
+    true,   // FR
+    false,  // RL
+    true,   // RR
 };
 
 int motors_init(void)
@@ -48,8 +47,7 @@ int motors_init(void)
             return ret;
         }
 
-        /* Start stopped: 0% duty. */
-        ret = pwm_set_pulse_dt(&motor_pwm[i], 0);
+        ret = pwm_set_pulse_dt(&motor_pwm[i], 0);   // start stopped
         if (ret < 0) {
             return ret;
         }
@@ -63,22 +61,20 @@ void motor_set(motor_id_t motor, int speed)
         return;
     }
 
-    /* Clamp to the valid signed range. */
     if (speed > 100) {
         speed = 100;
     } else if (speed < -100) {
         speed = -100;
     }
 
-    /* Sign -> direction, magnitude -> duty cycle (sign-magnitude mode). */
     bool forward = (speed >= 0);
     if (motor_invert[motor]) {
         forward = !forward;
     }
     gpio_pin_set_dt(&motor_dir[motor], forward ? 1 : 0);
 
-    uint32_t mag   = (uint32_t)abs(speed);                       /* 0..100  */
-    uint32_t pulse = (motor_pwm[motor].period * mag) / 100u;     /* ns      */
+    uint32_t mag   = (uint32_t)abs(speed);                   // 0..100
+    uint32_t pulse = (motor_pwm[motor].period * mag) / 100u;
     pwm_set_pulse_dt(&motor_pwm[motor], pulse);
 }
 
@@ -99,16 +95,15 @@ void motor_stop_all(void)
 
 void mecanum_drive(int vx, int vy, int omega)
 {
-    /* Standard mecanum inverse kinematics (rollers at +/-45 deg).
-     * vy is strafe-left positive, omega is CCW positive. */
+    // rollers at +/-45 deg. vy strafe-left positive, omega ccw positive
     int w[MOTOR_COUNT];
     w[MOTOR_FL] = vx - vy - omega;
     w[MOTOR_FR] = vx + vy + omega;
     w[MOTOR_RL] = vx + vy - omega;
     w[MOTOR_RR] = vx - vy + omega;
 
-    /* If any wheel command exceeds full scale, scale them all down by the
-     * same factor so the motion direction is preserved instead of clipped. */
+    // scale all wheels down by the same factor if any exceeds full scale,
+    // so direction is kept instead of clipped
     int maxmag = 100;
     for (int i = 0; i < MOTOR_COUNT; i++) {
         int m = abs(w[i]);

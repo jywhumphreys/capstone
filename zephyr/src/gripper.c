@@ -8,31 +8,27 @@
 
 static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(GRIPPER_NODE);
 
-/* Servo pulse range: 500 us .. 2500 us spans the full 0..270 deg travel
- * (per the servo datasheet). position 0..100 maps linearly across it. */
+// 500..2500us pulse spans the full 0..270 deg travel. position 0..100 maps
+// linearly across it
 #define SERVO_MIN_PULSE_NS  PWM_USEC(500)
 #define SERVO_MAX_PULSE_NS  PWM_USEC(2500)
 
-/* Calibrated mechanical limits on the 0..100 scale (measured on the bench).
- * The gripper binds past these, so positions are hard-clamped to this band —
- * lower = more open. Never command outside [GRIPPER_OPEN, GRIPPER_CLOSED]. */
-#define GRIPPER_OPEN    10   /* max open   */
-#define GRIPPER_CLOSED  30   /* max closed */
+// measured mechanical limits on the 0..100 scale (lower = more open). gripper
+// binds past these, so positions are hard-clamped to the band
+#define GRIPPER_OPEN    10
+#define GRIPPER_CLOSED  30
 
 int gripper_init(void)
 {
     if (!pwm_is_ready_dt(&servo)) {
         return -ENODEV;
     }
-
-    /* Don't command a position here — the caller drives it, so the servo
-     * goes straight to the first commanded position with no startup move. */
+    // don't command a position here — caller drives it, no startup jump
     return 0;
 }
 
 void gripper_set(int position)
 {
-    /* Hard-clamp to the calibrated travel so we never drive into a stop. */
     if (position < GRIPPER_OPEN) {
         position = GRIPPER_OPEN;
     } else if (position > GRIPPER_CLOSED) {
@@ -46,7 +42,6 @@ void gripper_set(int position)
 
 void gripper_test(void)
 {
-    /* Sweep between the calibrated open and closed limits — never beyond. */
     printk("gripper: open\n");
     gripper_set(GRIPPER_OPEN);
     k_msleep(1200);

@@ -6,44 +6,33 @@
 #include "hopper.h"
 #include "servo.h"
 
-/* Bench test selector — set TEST_MODE to one of:
- *   TEST_NONE     normal UART-driven operation
- *   TEST_DRIVE    spin each wheel in turn, then run mecanum motions
- *   TEST_GRIPPER  sweep the gripper open <-> closed within its limits
- *   TEST_HOPPER   extend / retract the linear actuator, looping
- *   TEST_ARM      cycle the 3 arm servos in a ping-pong order
- *   TEST_SET_ID   assign a bus ID to a single connected servo
- *   TEST_SWAP_ID  swap two servo IDs on the live chain (via a temp ID)
- *   TEST_DEMO     run all four subsystems in sequence (self-contained demo)
- */
-#define TEST_NONE     0
-#define TEST_DRIVE    1
-#define TEST_GRIPPER  2
-#define TEST_HOPPER   3
-#define TEST_ARM      4
-#define TEST_SET_ID   5
-#define TEST_SWAP_ID  6
-#define TEST_DEMO     7
+// pick a test mode (or TEST_NONE for normal uart operation)
+#define TEST_NONE     0   // uart-driven
+#define TEST_DRIVE    1   // mecanum demo
+#define TEST_GRIPPER  2   // gripper open/close
+#define TEST_HOPPER   3   // actuator extend/retract
+#define TEST_ARM      4   // arm servos, ping-pong 1-2-3-2-1
+#define TEST_SET_ID   5   // assign an id to a single connected servo
+#define TEST_SWAP_ID  6   // swap two ids on the chain
+#define TEST_DEMO     7   // all subsystems in sequence
 
 #define TEST_MODE     TEST_DEMO
 
-/* TEST_SET_ID: the ID to assign. Connect EXACTLY ONE servo, set this to 1
- * (base), flash, confirm; then connect only the next servo, set to 2, etc. */
+// TEST_SET_ID: id to assign. connect exactly one servo, flash, repeat per servo
 #define SET_ID_TARGET  SERVO_ID_ELBOW
 
-/* TEST_SWAP_ID: swap two IDs on the chained bus, addressing each by its
- * current ID and routing through SWAP_ID_TEMP so there's never a collision. */
-#define SWAP_ID_A      SERVO_ID_SHOULDER   /* 2 */
-#define SWAP_ID_B      SERVO_ID_ELBOW      /* 3 */
-#define SWAP_ID_TEMP   10                  /* any unused ID */
+// TEST_SWAP_ID: swap these two, routed through a temp id so no collision
+#define SWAP_ID_A      SERVO_ID_SHOULDER
+#define SWAP_ID_B      SERVO_ID_ELBOW
+#define SWAP_ID_TEMP   10
 
-#define DRIVE_SPEED            100    /* TEST_DRIVE: wheel speed, 0..100         */
-#define HOPPER_TEST_TRAVEL_MS 3000    /* TEST_HOPPER: drive time per direction   */
-#define HOPPER_TEST_PAUSE_MS  2000    /* TEST_HOPPER: pause between moves         */
+#define DRIVE_SPEED            100    // TEST_DRIVE wheel speed 0..100
+#define HOPPER_TEST_TRAVEL_MS 3000    // TEST_HOPPER drive time per direction
+#define HOPPER_TEST_PAUSE_MS  2000
 
 #if TEST_MODE == TEST_DRIVE
 
-/* Run one mecanum motion for `ms`, then stop and settle briefly. */
+// run one mecanum motion for ms, then stop
 static void demo(const char *label, int vx, int vy, int omega, int ms)
 {
     printk("%s\n", label);
@@ -65,34 +54,33 @@ int main(void)
     printk("\n=== mecanum demo ===\n");
 
     while (1) {
-        /* Cardinal translation. */
+        // cardinals
         demo("forward",         S,  0,    0, 1200);
         demo("backward",       -S,  0,    0, 1200);
         demo("strafe left",     0,  S,    0, 1200);
         demo("strafe right",    0, -S,    0, 1200);
 
-        /* Diagonals — translate at 45 deg without rotating. */
+        // diagonals (translate at 45 deg, no rotation)
         demo("diag fwd-right",  S, -S,    0, 1000);
         demo("diag back-left", -S,  S,    0, 1000);
         demo("diag fwd-left",   S,  S,    0, 1000);
         demo("diag back-right",-S, -S,    0, 1000);
 
-        /* Rotate in place. */
+        // rotate in place
         demo("spin CCW",        0,  0,    S, 1500);
         demo("spin CW",         0,  0,   -S, 1500);
 
-        /* Combined: drive and turn at once (arcs). */
+        // drive + turn at once
         demo("arc fwd + CCW",   S,  0,  S/2, 1500);
         demo("arc fwd + CW",    S,  0, -S/2, 1500);
 
-        /* Holonomic square — strafe each side, body never turns. */
+        // strafe a square without turning the body
         printk("-- holonomic square --\n");
         demo("  side 1 (fwd)",   S,  0,  0, 900);
         demo("  side 2 (right)", 0, -S,  0, 900);
         demo("  side 3 (back)", -S,  0,  0, 900);
         demo("  side 4 (left)",  0,  S,  0, 900);
 
-        /* Finale: full-speed pirouette. */
         demo("pirouette",        0,  0,  S, 2500);
 
         printk("--- demo complete, pausing ---\n");
@@ -114,11 +102,11 @@ int main(void)
 
     while (1) {
         printk("gripper: close\n");
-        gripper_set(100);          /* clamps to the closed limit */
+        gripper_set(100);          // clamps to closed limit
         k_msleep(10000);
 
         printk("gripper: open\n");
-        gripper_set(0);            /* clamps to the open limit */
+        gripper_set(0);            // clamps to open limit
         k_msleep(2000);
     }
 }
@@ -151,15 +139,12 @@ int main(void)
 
 #elif TEST_MODE == TEST_ARM
 
-/* Arm test: cycle all three servos in a ping-pong order (1->2->3->2->1->...)
- * to confirm each responds in turn. Each servo alternates between two angles
- * when its turn comes. 30..210 deg is a wide, visible sweep with ~30 deg
- * margin from the 0/240 hard stops — narrow these if a joint is mounted with
- * tighter mechanical limits. */
+// cycle all three in a ping-pong order, each alternating between two angles.
+// 30..210 leaves ~30 deg margin off the hard stops — narrow if mounted tight
 #define ARM_TEST_A_DEG    30.0f
 #define ARM_TEST_B_DEG    210.0f
-#define ARM_TEST_TIME_MS  1000     /* commanded move duration */
-#define ARM_TEST_PAUSE_MS 500      /* settle time after each move */
+#define ARM_TEST_TIME_MS  1000
+#define ARM_TEST_PAUSE_MS 500
 
 static void arm_report(uint8_t id)
 {
@@ -167,7 +152,7 @@ static void arm_report(uint8_t id)
     if (isnan(deg)) {
         printk("servo %u: no response\n", id);
     } else {
-        int tenths = (int)(deg * 10.0f);   /* %f isn't enabled */
+        int tenths = (int)(deg * 10.0f);   // %f isn't enabled
         printk("servo %u: %d.%d deg\n", id,
                tenths / 10, (tenths < 0 ? -tenths : tenths) % 10);
     }
@@ -180,17 +165,17 @@ int main(void)
         return 0;
     }
 
-    printk("\n=== arm test (servos 1 -> 2 -> 3 -> 2 -> 1 ...) ===\n");
+    printk("\n=== arm test (1 -> 2 -> 3 -> 2 -> 1 ...) ===\n");
 
     servo_set_torque(SERVO_ID_BASE, true);
     servo_set_torque(SERVO_ID_SHOULDER, true);
     servo_set_torque(SERVO_ID_ELBOW, true);
 
-    /* Looping this order yields the ping-pong 1,2,3,2,1,2,3,2,... */
+    // looping this gives 1,2,3,2,1,2,3,2,...
     static const uint8_t order[] = {
         SERVO_ID_BASE, SERVO_ID_SHOULDER, SERVO_ID_ELBOW, SERVO_ID_SHOULDER
     };
-    bool at_b[SERVO_ID_ELBOW + 1] = { false };   /* per-id target toggle */
+    bool at_b[SERVO_ID_ELBOW + 1] = { false };
 
     while (1) {
         for (int i = 0; i < (int)ARRAY_SIZE(order); i++) {
@@ -215,22 +200,19 @@ int main(void)
         return 0;
     }
 
-    printk("\n=== set servo ID -> %d ===\n", SET_ID_TARGET);
-    printk("Make sure EXACTLY ONE servo is connected.\n");
+    printk("\n=== set servo id -> %d (one servo connected) ===\n", SET_ID_TARGET);
 
-    /* Broadcast works regardless of the servo's current (possibly default) ID,
-     * but addresses every servo on the bus — hence the one-at-a-time rule. */
+    // broadcast works at any current id, but hits every servo — hence one at a time
     servo_set_id(SERVO_ID_BROADCAST, SET_ID_TARGET);
     k_msleep(100);
 
-    /* Confirm: the servo should now answer at its new ID. */
+    // confirm it answers at the new id
     float deg = servo_read_pos(SET_ID_TARGET);
     if (isnan(deg)) {
-        printk("readback FAILED at ID %d — is exactly one servo connected?\n",
+        printk("readback failed at id %d — exactly one servo connected?\n",
                SET_ID_TARGET);
     } else {
-        printk("OK: servo now responds at ID %d (%d deg)\n",
-               SET_ID_TARGET, (int)deg);
+        printk("ok: servo answers at id %d (%d deg)\n", SET_ID_TARGET, (int)deg);
     }
 
     while (1) {
@@ -247,22 +229,20 @@ int main(void)
         return 0;
     }
 
-    printk("\n=== swap servo IDs %d <-> %d (chain connected) ===\n",
-           SWAP_ID_A, SWAP_ID_B);
+    printk("\n=== swap servo ids %d <-> %d ===\n", SWAP_ID_A, SWAP_ID_B);
 
-    /* Route through a temp ID so no two servos ever share an address. */
-    servo_set_id(SWAP_ID_A, SWAP_ID_TEMP);   /* A -> temp */
+    // route through a temp id so no two servos ever share an address
+    servo_set_id(SWAP_ID_A, SWAP_ID_TEMP);
     k_msleep(100);
-    servo_set_id(SWAP_ID_B, SWAP_ID_A);      /* B -> A    */
+    servo_set_id(SWAP_ID_B, SWAP_ID_A);
     k_msleep(100);
-    servo_set_id(SWAP_ID_TEMP, SWAP_ID_B);   /* temp -> B */
+    servo_set_id(SWAP_ID_TEMP, SWAP_ID_B);
     k_msleep(100);
 
-    /* Confirm both new IDs answer. */
-    printk("ID %d: %s\n", SWAP_ID_A,
-           isnan(servo_read_pos(SWAP_ID_A)) ? "no response" : "OK");
-    printk("ID %d: %s\n", SWAP_ID_B,
-           isnan(servo_read_pos(SWAP_ID_B)) ? "no response" : "OK");
+    printk("id %d: %s\n", SWAP_ID_A,
+           isnan(servo_read_pos(SWAP_ID_A)) ? "no response" : "ok");
+    printk("id %d: %s\n", SWAP_ID_B,
+           isnan(servo_read_pos(SWAP_ID_B)) ? "no response" : "ok");
 
     while (1) {
         k_msleep(1000);
@@ -271,9 +251,8 @@ int main(void)
 
 #elif TEST_MODE == TEST_DEMO
 
-/* Self-contained showcase: drive -> gripper -> hopper -> arm, in sequence,
- * looping. One subsystem actuates at a time, so peak power stays bounded.
- * No Jetson/UART needed. */
+// self-contained showcase: drive -> gripper -> hopper -> arm, looping. one
+// subsystem at a time so peak power stays bounded. no jetson needed
 int main(void)
 {
     motors_init();
@@ -281,17 +260,16 @@ int main(void)
     hopper_init();
     servo_init();
 
-    const int S = 80;   /* drive speed — a touch under full for control */
+    const int S = 80;   // a touch under full for control
 
     printk("\n=== robot demo ===\n");
 
-    /* Arm joints to a neutral pose once, up front. */
     servo_set_torque(SERVO_ID_BASE, true);
     servo_set_torque(SERVO_ID_SHOULDER, true);
     servo_set_torque(SERVO_ID_ELBOW, true);
 
     while (1) {
-        /* --- drive: a sampler of mecanum moves --- */
+        // drive — a sampler of mecanum moves
         printk("[drive] forward\n");
         mecanum_drive(S, 0, 0);   k_msleep(1200); motor_stop_all(); k_msleep(400);
         printk("[drive] strafe right\n");
@@ -301,19 +279,19 @@ int main(void)
         printk("[drive] spin\n");
         mecanum_drive(0, 0, S);   k_msleep(1500); motor_stop_all(); k_msleep(600);
 
-        /* --- gripper --- */
+        // gripper
         printk("[gripper] open\n");
         gripper_set(0);    k_msleep(1200);
         printk("[gripper] close\n");
         gripper_set(100);  k_msleep(1200);
 
-        /* --- hopper --- */
+        // hopper
         printk("[hopper] extend\n");
         hopper_extend();   k_msleep(3000); hopper_stop(); k_msleep(800);
         printk("[hopper] retract\n");
         hopper_retract();  k_msleep(3000); hopper_stop(); k_msleep(800);
 
-        /* --- arm: home, then a little elbow wave --- */
+        // arm — home, then a little elbow wave
         printk("[arm] pose + wave\n");
         servo_move(SERVO_ID_BASE,     120.0f, 800);
         servo_move(SERVO_ID_SHOULDER, 120.0f, 800);
@@ -328,7 +306,7 @@ int main(void)
     }
 }
 
-#else  /* TEST_NONE — normal UART-driven operation */
+#else  // TEST_NONE — normal uart operation
 
 int main(void)
 {
@@ -345,4 +323,4 @@ int main(void)
     }
 }
 
-#endif /* TEST_MODE */
+#endif

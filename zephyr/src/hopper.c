@@ -5,16 +5,15 @@
 
 #define HOPPER_NODE DT_NODELABEL(hopper)
 
-/* Full-travel timeout. Long enough to reach the internal limit switch with
- * margin: this short-throw PA-MC1 fully extends/retracts in ~2 s, so 3 s
- * covers it. Well under the actuator's 2-min on-time duty-cycle limit. */
+// long enough to reach the limit switch with margin. this short-throw unit
+// fully travels in ~2s, well under its 2-min on-time duty limit
 #define HOPPER_TRAVEL_MS  3000u
 
 static const struct gpio_dt_spec ain1 = GPIO_DT_SPEC_GET(HOPPER_NODE, ain1_gpios);
 static const struct gpio_dt_spec ain2 = GPIO_DT_SPEC_GET(HOPPER_NODE, ain2_gpios);
 
-static bool     moving;       /* true while a timed move is in progress */
-static uint32_t move_start;   /* k_uptime_get_32() when the move began  */
+static bool     moving;
+static uint32_t move_start;
 
 int hopper_init(void)
 {
@@ -22,7 +21,6 @@ int hopper_init(void)
         return -ENODEV;
     }
 
-    /* Both low = stopped. */
     int ret = gpio_pin_configure_dt(&ain1, GPIO_OUTPUT_INACTIVE);
     if (ret < 0) {
         return ret;

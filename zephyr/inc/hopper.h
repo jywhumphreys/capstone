@@ -1,27 +1,17 @@
 #ifndef HOPPER_H
 #define HOPPER_H
 
-/* Linear actuator (hopper) driven by one channel of a TB6612FNG.
- *
- * Hardware: Progressive Automations PA-MC1, 12 V brushed DC, full-voltage only
- * (no PWM), with internal limit switches that cut power at end of travel — so
- * there is no stall condition. PWMA and STBY are tied high; only the two
- * direction lines (AIN1/AIN2) are driven.
- *
- * Since there is no position feedback, a move runs for a fixed timeout
- * (HOPPER_TRAVEL_MS) that is generous enough to reach the end stop, then the
- * pins are de-energized. extend()/retract() are non-blocking and arm that
- * timeout; hopper_tick() must be called periodically to enforce it. */
+// linear actuator (hopper) on one channel of a TB6612FNG. PA-MC1, 12V, full
+// voltage only (no pwm), internal limit switches so no stall. PWMA + STBY tied
+// high, only AIN1/AIN2 driven. no feedback, so a move runs for a fixed timeout
+// then the pins are released — extend/retract arm it, hopper_tick enforces it
 
-/* Configure the direction GPIOs. Returns 0 on success, negative errno if a pin
- * is not ready. Leaves the actuator stopped. */
-int hopper_init(void);
+int hopper_init(void);      // configure dir pins, leave stopped. 0 ok, <0 errno
 
-void hopper_extend(void);   /* AIN1 = HIGH, AIN2 = LOW;  auto-stops after timeout */
-void hopper_retract(void);  /* AIN1 = LOW,  AIN2 = HIGH; auto-stops after timeout */
-void hopper_stop(void);     /* AIN1 = LOW,  AIN2 = LOW                            */
+void hopper_extend(void);   // ain1 high, ain2 low
+void hopper_retract(void);  // ain1 low,  ain2 high
+void hopper_stop(void);     // both low
 
-/* Call periodically (e.g. from the main loop) to enforce the move timeout. */
-void hopper_tick(void);
+void hopper_tick(void);     // call periodically to enforce the move timeout
 
 #endif /* HOPPER_H */
