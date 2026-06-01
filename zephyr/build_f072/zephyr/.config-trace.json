@@ -55,7 +55,7 @@
     ]
   ],
   [
-    "CONFIG_DT_HAS_CAPSTONE_MECANUM_MOTORS_ENABLED",
+    "CONFIG_DT_HAS_CAPSTONE_HOPPER_ENABLED",
     "n",
     "bool",
     "y",
@@ -66,6 +66,17 @@
     ]
   ],
   [
+    "CONFIG_DT_HAS_CAPSTONE_MECANUM_MOTORS_ENABLED",
+    "n",
+    "bool",
+    "y",
+    "default",
+    [
+      "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
+      2348
+    ]
+  ],
+  [
     "CONFIG_DT_HAS_FIXED_LAYOUT_ENABLED",
     "n",
     "bool",
@@ -73,7 +84,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      3013
+      3018
     ]
   ],
   [
@@ -84,7 +95,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      3293
+      3298
     ]
   ],
   [
@@ -95,7 +106,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      3298
+      3303
     ]
   ],
   [
@@ -106,7 +117,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      6023
+      6028
     ]
   ],
   [
@@ -117,7 +128,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      12558
+      12563
     ]
   ],
   [
@@ -128,7 +139,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      12963
+      12968
     ]
   ],
   [
@@ -139,7 +150,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13098
+      13103
     ]
   ],
   [
@@ -150,7 +161,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13108
+      13113
     ]
   ],
   [
@@ -161,7 +172,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13133
+      13138
     ]
   ],
   [
@@ -172,7 +183,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13143
+      13148
     ]
   ],
   [
@@ -183,7 +194,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13163
+      13168
     ]
   ],
   [
@@ -194,7 +205,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13203
+      13208
     ]
   ],
   [
@@ -205,7 +216,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13238
+      13243
     ]
   ],
   [
@@ -216,7 +227,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13243
+      13248
     ]
   ],
   [
@@ -227,7 +238,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13283
+      13288
     ]
   ],
   [
@@ -238,7 +249,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13288
+      13293
     ]
   ],
   [
@@ -249,7 +260,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13323
+      13328
     ]
   ],
   [
@@ -260,7 +271,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13338
+      13343
     ]
   ],
   [
@@ -271,7 +282,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13363
+      13368
     ]
   ],
   [
@@ -282,7 +293,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13368
+      13373
     ]
   ],
   [
@@ -293,7 +304,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13388
+      13393
     ]
   ],
   [
@@ -304,7 +315,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13393
+      13398
     ]
   ],
   [
@@ -315,7 +326,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13403
+      13408
     ]
   ],
   [
@@ -326,7 +337,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13413
+      13418
     ]
   ],
   [
@@ -337,7 +348,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13438
+      13443
     ]
   ],
   [
@@ -348,7 +359,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13448
+      13453
     ]
   ],
   [
@@ -359,7 +370,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13508
+      13513
     ]
   ],
   [
@@ -370,7 +381,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13513
+      13518
     ]
   ],
   [
@@ -381,7 +392,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      13528
+      13533
     ]
   ],
   [
@@ -392,7 +403,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      14033
+      14038
     ]
   ],
   [
@@ -403,7 +414,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      15238
+      15243
     ]
   ],
   [
@@ -414,7 +425,7 @@
     "default",
     [
       "C:/Users/justin/Documents/capstone/zephyr/build_f072/Kconfig/Kconfig.dts",
-      16548
+      16553
     ]
   ],
   [

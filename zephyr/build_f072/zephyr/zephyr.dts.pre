@@ -2317,6 +2317,13 @@ arduino_spi: &spi1 {};
 
   pwms = <&pwm1 1 ((20000) * 1000UL) (0 << 0)>;
  };
+
+ hopper: hopper {
+  compatible = "capstone,hopper";
+
+  ain1-gpios = <&gpiob 8 (0 << 0)>;
+  ain2-gpios = <&gpiob 9 (0 << 0)>;
+ };
 };
 # 0 "<command-line>" 2
 # 1 "C:/Users/justin/zephyrproject/zephyr/misc/empty_file.c"

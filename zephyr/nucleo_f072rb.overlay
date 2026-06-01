@@ -82,4 +82,11 @@
 		/* PA8 TIM1_CH1, 20 ms (50 Hz) servo frame. */
 		pwms = <&pwm1 1 PWM_USEC(20000) PWM_POLARITY_NORMAL>;
 	};
+
+	hopper: hopper {
+		compatible = "capstone,hopper";
+		/* TB6612FNG channel A direction inputs (PWMA + STBY tied high). */
+		ain1-gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;  /* PB8 */
+		ain2-gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;  /* PB9 */
+	};
 };

@@ -1103,4 +1103,11 @@
 		compatible = "capstone,gripper";    /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:81 */
 		pwms = < &pwm1 0x1 0x1312d00 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:83 */
 	};
+
+	/* node '/hopper' defined in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:86 */
+	hopper: hopper {
+		compatible = "capstone,hopper";  /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:87 */
+		ain1-gpios = < &gpiob 0x8 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:89 */
+		ain2-gpios = < &gpiob 0x9 0x0 >; /* in ..\Documents\capstone\zephyr\nucleo_f072rb.overlay:90 */
+	};
 };

@@ -1,0 +1,15 @@
+description: |
+  TB6612FNG-driven linear actuator (hopper mechanism). PWMA and STBY are tied
+  high in hardware, so only the two direction inputs are controlled.
+
+compatible: "capstone,hopper"
+
+properties:
+  ain1-gpios:
+    type: phandle-array
+    required: true
+    description: TB6612FNG AIN1 direction input.
+  ain2-gpios:
+    type: phandle-array
+    required: true
+    description: TB6612FNG AIN2 direction input.

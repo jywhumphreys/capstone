@@ -2337,6 +2337,11 @@ DT_COMPAT_CAPSTONE_GRIPPER := capstone,gripper
 config DT_HAS_CAPSTONE_GRIPPER_ENABLED
 	def_bool $(dt_compat_enabled,$(DT_COMPAT_CAPSTONE_GRIPPER))
 
+DT_COMPAT_CAPSTONE_HOPPER := capstone,hopper
+
+config DT_HAS_CAPSTONE_HOPPER_ENABLED
+	def_bool $(dt_compat_enabled,$(DT_COMPAT_CAPSTONE_HOPPER))
+
 DT_COMPAT_CAPSTONE_MECANUM_MOTORS := capstone,mecanum-motors
 
 config DT_HAS_CAPSTONE_MECANUM_MOTORS_ENABLED
