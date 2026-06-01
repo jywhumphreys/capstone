@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal HTTP server that serves the dashboard web directory."""
+"""minimal http server for the dashboard web directory."""
 import os
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -31,7 +31,7 @@ class DashboardServerNode(Node):
         thread.start()
 
         self.get_logger().info(
-            f'Dashboard at http://0.0.0.0:{port}  (serve dir: {web_dir})')
+            f'dashboard at http://0.0.0.0:{port}  (serve dir: {web_dir})')
 
 
 def main(args=None):

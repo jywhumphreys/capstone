@@ -3,37 +3,36 @@
 
 #include <stdint.h>
 
-/* ── Framing ─────────────────────────────────────────────────────────────── */
-#define PKT_HEADER_0    0xAAu
-#define PKT_HEADER_1    0x55u
+// uart frame: [0xAA][0x55][cmd][len][payload... len bytes][chk]
+// chk = xor of cmd, len, and every payload byte. multi-byte fields little-endian
 
-/* ── Command IDs ─────────────────────────────────────────────────────────── */
-#define CMD_DRIVE       0x01u   /* Jetson → STM32 */
-#define CMD_ODOM        0x02u   /* STM32  → Jetson */
+#define PKT_HEADER_0  0xAAu
+#define PKT_HEADER_1  0x55u
 
-/* ── Packet layouts ──────────────────────────────────────────────────────── */
-/*
- * DRIVE packet (12 bytes, Jetson → STM32):
- *   [0xAA][0x55][0x01][FL_H][FL_L][FR_H][FR_L][RL_H][RL_L][RR_H][RR_L][CHK]
- *   Wheel speeds: int16, big-endian, range –1000 … +1000
- *   (+1000 = full forward, –1000 = full reverse)
- *
- * ODOM packet (20 bytes, STM32 → Jetson, sent at 50 Hz):
- *   [0xAA][0x55][0x02][FL×4][FR×4][RL×4][RR×4][CHK]
- *   Encoder ticks: int32, little-endian, cumulative since boot
- *
- * CHK = XOR of every byte from CMD through last payload byte (inclusive).
- * Motor order: 0=FL, 1=FR, 2=RL, 3=RR
- */
+// jetson -> stm32
+#define CMD_DRIVE     0x01u   // 8B: 4x int16 wheel speed FL FR RL RR, +/-1000
+#define CMD_GRIPPER   0x03u   // 1B: position 0..100
+#define CMD_HOPPER    0x04u   // 1B: 0 stop / 1 extend / 2 retract
+#define CMD_ARM       0x05u   // 8B: 3x int16 angle (tenths-deg) + uint16 time_ms
 
-#define DRIVE_PAYLOAD_LEN   8u   /* 4 × int16 */
-#define ODOM_PAYLOAD_LEN    16u  /* 4 × int32 */
+// stm32 -> jetson
+#define CMD_ODOM      0x02u   // 16B: 4x int32 encoder ticks
 
-#define DRIVE_PKT_LEN   (2u + 1u + DRIVE_PAYLOAD_LEN + 1u)   /* 12 */
-#define ODOM_PKT_LEN    (2u + 1u + ODOM_PAYLOAD_LEN  + 1u)   /* 20 */
+#define DRIVE_PAYLOAD_LEN    8u
+#define GRIPPER_PAYLOAD_LEN  1u
+#define HOPPER_PAYLOAD_LEN   1u
+#define ARM_PAYLOAD_LEN      8u
+#define ODOM_PAYLOAD_LEN     16u
 
-/* Speed clamp helpers */
-#define SPEED_MAX   1000
-#define SPEED_MIN  -1000
+#define RX_MAX_PAYLOAD       16u
+#define ODOM_PKT_LEN         (2u + 1u + 1u + ODOM_PAYLOAD_LEN + 1u)   // 21
+
+// hopper actions
+#define HOPPER_ACT_STOP     0u
+#define HOPPER_ACT_EXTEND   1u
+#define HOPPER_ACT_RETRACT  2u
+
+// drive speed is +/-1000 on the wire, +/-100 in the firmware
+#define DRIVE_SPEED_FULL    1000
 
 #endif /* COMMS_PROTOCOL_H */

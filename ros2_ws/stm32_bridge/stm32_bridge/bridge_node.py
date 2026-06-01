@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """
-stm32_bridge — bidirectional UART bridge between ROS2 and the STM32 drivetrain.
+stm32_bridge — uart bridge between ros2 and the stm32.
 
-Subscribed topics:
-  /wheel_speeds  (std_msgs/Float32MultiArray)
-    data[0..3] = FL, FR, RL, RR  in range –1.0 … +1.0
+frame: [0xAA][0x55][cmd][len][payload... len bytes][chk]
+chk = xor of cmd, len and every payload byte. multi-byte fields little-endian.
 
-Published topics:
-  /wheel_encoders  (std_msgs/Int32MultiArray)
-    data[0..3] = FL, FR, RL, RR  cumulative encoder ticks (int32)
+subscribes:
+  /wheel_speeds  Float32MultiArray  FL FR RL RR, -1.0 .. +1.0  -> drive
+  /gripper       Int32              0..100                     -> gripper
+  /hopper        Int32              0 stop / 1 extend / 2 retract
+  /arm           Float32MultiArray  [base, shoulder, elbow] deg (+ optional time_ms)
 
-Parameters:
-  serial_port   (string)  default: /dev/ttyTHS0
-  baud_rate     (int)     default: 115200
+publishes:
+  /wheel_encoders  Int32MultiArray  FL FR RL RR cumulative ticks
+
+params:
+  serial_port  (string)  default /dev/ttyTHS1
+  baud_rate    (int)     default 115200
 """
 
 import struct
@@ -20,49 +24,41 @@ import threading
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray, Int32MultiArray
+from std_msgs.msg import Float32MultiArray, Int32MultiArray, Int32
 
 try:
     import serial
 except ImportError:
     raise SystemExit("pyserial not found — run: pip3 install pyserial")
 
-# ── Protocol constants (must match comms_protocol.h) ──────────────────────
-HEADER       = bytes([0xAA, 0x55])
-CMD_DRIVE    = 0x01
-CMD_ODOM     = 0x02
-ODOM_PKT_LEN = 20   # 2 header + 1 cmd + 16 payload + 1 chk
+# ── protocol (must match comms_protocol.h) ────────────────────────────────
+HEADER      = bytes([0xAA, 0x55])
+CMD_DRIVE   = 0x01
+CMD_ODOM    = 0x02
+CMD_GRIPPER = 0x03
+CMD_HOPPER  = 0x04
+CMD_ARM     = 0x05
+
+ODOM_PAYLOAD_LEN = 16
+ARM_DEFAULT_TIME_MS = 800
 
 
-def _checksum(cmd: int, payload: bytes) -> int:
-    chk = cmd
+def _chk(cmd: int, payload: bytes) -> int:
+    c = cmd ^ len(payload)
     for b in payload:
-        chk ^= b
-    return chk & 0xFF
+        c ^= b
+    return c & 0xFF
 
 
-def build_drive_packet(speeds: list[int]) -> bytes:
-    """speeds: list of 4 int16 in –1000 … +1000, order FL FR RL RR."""
-    payload = struct.pack('>4h', *speeds)          # big-endian int16
-    chk = _checksum(CMD_DRIVE, payload)
-    return HEADER + bytes([CMD_DRIVE]) + payload + bytes([chk])
+def build_packet(cmd: int, payload: bytes) -> bytes:
+    return HEADER + bytes([cmd, len(payload)]) + payload + bytes([_chk(cmd, payload)])
 
 
-def parse_odom_packet(pkt: bytes):
-    """pkt: 20 raw bytes starting at 0xAA.
-    Returns tuple of 4 int32 ticks (FL, FR, RL, RR) or None on bad checksum."""
-    if len(pkt) != ODOM_PKT_LEN:
-        return None
-    if pkt[0] != 0xAA or pkt[1] != 0x55 or pkt[2] != CMD_ODOM:
-        return None
-    payload = pkt[3:19]
-    chk     = pkt[19]
-    if _checksum(CMD_ODOM, payload) != chk:
-        return None
-    return struct.unpack('<4i', payload)            # little-endian int32
+def _clamp(v, lo, hi):
+    return max(lo, min(hi, v))
 
 
-# ── Node ──────────────────────────────────────────────────────────────────
+# ── node ───────────────────────────────────────────────────────────────────
 class STM32BridgeNode(Node):
     def __init__(self):
         super().__init__('stm32_bridge')
@@ -73,14 +69,16 @@ class STM32BridgeNode(Node):
         port = self.get_parameter('serial_port').get_parameter_value().string_value
         baud = self.get_parameter('baud_rate').get_parameter_value().integer_value
 
-        self.get_logger().info(f'Opening {port} at {baud} baud')
+        self.get_logger().info(f'opening {port} at {baud} baud')
         self.ser = serial.Serial(port, baud, timeout=0.05)
         self.ser_lock = threading.Lock()
 
-        self.speeds_sub = self.create_subscription(
-            Float32MultiArray, '/wheel_speeds', self._speeds_cb, 10)
-        self.enc_pub = self.create_publisher(
-            Int32MultiArray, '/wheel_encoders', 10)
+        self.create_subscription(Float32MultiArray, '/wheel_speeds', self._drive_cb, 10)
+        self.create_subscription(Int32, '/gripper', self._gripper_cb, 10)
+        self.create_subscription(Int32, '/hopper', self._hopper_cb, 10)
+        self.create_subscription(Float32MultiArray, '/arm', self._arm_cb, 10)
+
+        self.enc_pub = self.create_publisher(Int32MultiArray, '/wheel_encoders', 10)
 
         self._read_thread = threading.Thread(
             target=self._read_loop, daemon=True, name='serial_rx')
@@ -88,49 +86,66 @@ class STM32BridgeNode(Node):
 
         self.get_logger().info('stm32_bridge ready')
 
-    # ── TX ─────────────────────────────────────────────────────────────────
-    def _speeds_cb(self, msg: Float32MultiArray):
-        if len(msg.data) < 4:
-            self.get_logger().warn('wheel_speeds needs 4 elements')
-            return
-        speeds = [max(-1000, min(1000, int(v * 1000))) for v in msg.data[:4]]
-        pkt = build_drive_packet(speeds)
+    def _send(self, pkt: bytes):
         with self.ser_lock:
             self.ser.write(pkt)
 
-    # ── RX ─────────────────────────────────────────────────────────────────
+    # ── tx ───────────────────────────────────────────────────────────────
+    def _drive_cb(self, msg: Float32MultiArray):
+        if len(msg.data) < 4:
+            self.get_logger().warn('wheel_speeds needs 4 elements')
+            return
+        speeds = [_clamp(int(v * 1000), -1000, 1000) for v in msg.data[:4]]
+        self._send(build_packet(CMD_DRIVE, struct.pack('<4h', *speeds)))
+
+    def _gripper_cb(self, msg: Int32):
+        pos = _clamp(int(msg.data), 0, 100)
+        self._send(build_packet(CMD_GRIPPER, bytes([pos])))
+
+    def _hopper_cb(self, msg: Int32):
+        act = _clamp(int(msg.data), 0, 2)
+        self._send(build_packet(CMD_HOPPER, bytes([act])))
+
+    def _arm_cb(self, msg: Float32MultiArray):
+        if len(msg.data) < 3:
+            self.get_logger().warn('arm needs at least 3 angles')
+            return
+        angles = [_clamp(int(a * 10), -32768, 32767) for a in msg.data[:3]]  # tenths-deg
+        t = int(msg.data[3]) if len(msg.data) >= 4 else ARM_DEFAULT_TIME_MS
+        self._send(build_packet(CMD_ARM, struct.pack('<3hH', *angles, t & 0xFFFF)))
+
+    # ── rx ───────────────────────────────────────────────────────────────
     def _read_loop(self):
         buf = bytearray()
         while rclpy.ok():
             try:
                 chunk = self.ser.read(64)
             except Exception as e:
-                self.get_logger().error(f'Serial read error: {e}')
+                self.get_logger().error(f'serial read error: {e}')
                 break
             if chunk:
                 buf.extend(chunk)
                 buf = self._drain(buf)
 
     def _drain(self, buf: bytearray) -> bytearray:
-        while len(buf) >= ODOM_PKT_LEN:
-            # Find header
-            idx = -1
-            for i in range(len(buf) - 1):
-                if buf[i] == 0xAA and buf[i + 1] == 0x55:
-                    idx = i
-                    break
-            if idx == -1:
-                return buf[-1:]      # keep last byte — may be first header byte
-            if idx > 0:
-                buf = buf[idx:]      # discard junk before header
-            if len(buf) < ODOM_PKT_LEN:
-                break
-            result = parse_odom_packet(bytes(buf[:ODOM_PKT_LEN]))
-            buf = buf[ODOM_PKT_LEN:]
-            if result is not None:
+        # need at least header+cmd+len before we know the frame size
+        while len(buf) >= 4:
+            if buf[0] != 0xAA or buf[1] != 0x55:
+                del buf[0]               # resync byte by byte
+                continue
+            cmd = buf[2]
+            length = buf[3]
+            frame_len = 4 + length + 1
+            if len(buf) < frame_len:
+                break                    # wait for the rest
+            payload = bytes(buf[4:4 + length])
+            chk = buf[frame_len - 1]
+            if _chk(cmd, payload) == chk and cmd == CMD_ODOM and length == ODOM_PAYLOAD_LEN:
+                ticks = struct.unpack('<4i', payload)
                 out = Int32MultiArray()
-                out.data = list(result)
+                out.data = list(ticks)
                 self.enc_pub.publish(out)
+            del buf[:frame_len]
         return buf
 
     def destroy_node(self):

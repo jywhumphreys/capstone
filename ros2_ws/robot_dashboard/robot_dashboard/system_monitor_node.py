@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publishes Jetson system stats to /system_stats as JSON at 1 Hz."""
+"""publishes jetson system stats to /system_stats as json at 1hz."""
 import json
 import glob
 import threading
@@ -31,10 +31,10 @@ class SystemMonitorNode(Node):
     def __init__(self):
         super().__init__("system_monitor")
 
-        self._gpu_ema   = 0.0   # exponential moving average of GPU load
+        self._gpu_ema   = 0.0   # exponential moving average of gpu load
         self._gpu_lock  = threading.Lock()
 
-        # Poll GPU at 10 Hz in background thread so we get a real average
+        # poll gpu at 10hz in a background thread so we get a real average
         self._stop = False
         self._gpu_thread = threading.Thread(
             target=self._gpu_poll_loop, daemon=True, name="gpu_poll")
@@ -50,7 +50,7 @@ class SystemMonitorNode(Node):
                 "/sys/devices/platform/bus@0/17000000.gpu/load") / 10.0
             with self._gpu_lock:
                 self._gpu_ema = 0.85 * self._gpu_ema + 0.15 * val
-            time.sleep(0.1)  # 10 Hz
+            time.sleep(0.1)  # 10hz
 
     def _tick(self):
         with self._gpu_lock:

@@ -27,16 +27,16 @@ class YoloDetectorNode(Node):
         publish_image      = self.get_parameter("publish_image").get_parameter_value().bool_value
         fps                = self.get_parameter("fps").get_parameter_value().double_value
 
-        self.get_logger().info(f"Loading engine: {engine_path}")
+        self.get_logger().info(f"loading engine: {engine_path}")
         self.model = YOLO(engine_path, task="detect")
-        self.get_logger().info("Engine loaded")
+        self.get_logger().info("engine loaded")
 
         self.cap = cv2.VideoCapture(camera_index)
         if not self.cap.isOpened():
-            self.get_logger().fatal(f"Cannot open camera index {camera_index}")
-            raise RuntimeError("Camera not available")
+            self.get_logger().fatal(f"cannot open camera index {camera_index}")
+            raise RuntimeError("camera not available")
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        self.get_logger().info(f"Camera /dev/video{camera_index} opened")
+        self.get_logger().info(f"camera /dev/video{camera_index} opened")
 
         self.bridge = CvBridge()
         self.det_pub = self.create_publisher(Detection2DArray, "detections", 10)
@@ -46,7 +46,7 @@ class YoloDetectorNode(Node):
         self._frame_lock = threading.Lock()
         self._shutting_down = False
 
-        # Guard: drop timer tick if previous inference is still running
+        # drop a timer tick if the previous inference is still running
         self._inferring    = False
         self._infer_lock   = threading.Lock()
 
@@ -56,7 +56,7 @@ class YoloDetectorNode(Node):
 
         self.timer = self.create_timer(1.0 / fps, self._inference_callback)
 
-    # ── Capture loop ──────────────────────────────────────────────────────
+    # ── capture loop ──────────────────────────────────────────────────────
     def _capture_loop(self):
         while not self._shutting_down:
             ret, frame = self.cap.read()
@@ -64,12 +64,12 @@ class YoloDetectorNode(Node):
                 with self._frame_lock:
                     self._frame = frame
 
-    # ── Inference callback ────────────────────────────────────────────────
+    # ── inference callback ────────────────────────────────────────────────
     def _inference_callback(self):
         if self._shutting_down or not self.context.ok():
             return
 
-        # Skip this tick if inference from the last tick is still running
+        # skip this tick if inference from the last tick is still running
         with self._infer_lock:
             if self._inferring:
                 return

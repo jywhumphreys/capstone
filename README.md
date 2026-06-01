@@ -1,4 +1,4 @@
-# jetson capstone — autonomous trash-picking robot
+# capstone — autonomous trash-picking robot
 
 roomba/wall-e style robot on a jetson orin nano. patrols a room, detects trash with yolo vision, drives over and collects it with a small arm + gripper, drops it in an onboard hopper. mecanum drive for holonomic motion. accessible over wifi via a web dashboard.
 
@@ -32,7 +32,7 @@ subsystems (each bench-tested):
 - **gripper** — pwm servo, clamped to a calibrated open/closed band
 - **hopper** — TB6612FNG dir-only control, timed move (no feedback, internal limit switches)
 - **servo** — HTD-45H half-duplex bus protocol on usart3 (move / read position / set id / torque)
-- **comms** — uart packet protocol to/from the jetson (drive in, odom out)
+- **comms** — uart packet protocol to/from the jetson (drive / gripper / hopper / arm in, odom out), with a drive watchdog
 
 `main.c` has a `TEST_MODE` selector — per-subsystem bench tests plus a combined demo that runs all four in sequence with no jetson attached.
 
@@ -52,7 +52,7 @@ ros2 humble. packages:
 - **yolo_detector** — c920 -> yolo (tensorrt fp16) at ~15fps. publishes `/detections` + annotated `/camera/image_raw`.
 - **state_machine** — the brain: patrol / approach / collect / deposit / fetch / teleop / idle. subscribes `/detections`, `/state_cmd`, `/cmd_vel_teleop`; publishes `/cmd_vel`, `/robot_state`. teleop has a 0.5s watchdog.
 - **drive_node** — `/cmd_vel` -> `/wheel_speeds` via mecanum inverse kinematics, normalised. params for wheel radius / wheelbase / max vel and per-wheel invert.
-- **stm32_bridge** — `/wheel_speeds` -> uart packets on `/dev/ttyTHS1` @115200, encoders back on `/wheel_encoders`. written, not yet in the launch file.
+- **stm32_bridge** — uart link to the stm32 on `/dev/ttyTHS1` @115200. subscribes `/wheel_speeds`, `/gripper`, `/hopper`, `/arm` -> command packets; reads odom back to `/wheel_encoders`. written, not yet in the launch file.
 - **robot_dashboard** — web ui on `:8888` (rosbridge `:9090`, web_video_server `:8080` for the mjpeg feed). `system_monitor` publishes `/system_stats`.
 
 bring it all up (minus stm32_bridge):

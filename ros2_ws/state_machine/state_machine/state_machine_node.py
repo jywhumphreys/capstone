@@ -2,30 +2,23 @@
 """
 state_machine — robot behaviour state machine.
 
-States:
-  IDLE     waiting for command
-  PATROL   random wander, scanning for trash
-  APPROACH target acquired, closing in
-  COLLECT  placeholder (arm pick-up not yet implemented)
-  DEPOSIT  placeholder (return to bin)
-  FETCH    dead-reckon to a fixed location (beer run, etc.)
-  TELEOP   manual override — passes /cmd_vel_teleop straight through
+states:
+  idle     waiting for command
+  patrol   random wander, scanning for trash
+  approach target acquired, closing in
+  collect  placeholder (arm pick-up not yet implemented)
+  deposit  placeholder (return to bin)
+  fetch    dead-reckon to a fixed location
+  teleop   manual override — passes /cmd_vel_teleop straight through
 
-External commands (publish a string to /state_cmd):
-  "patrol"  "fetch"  "idle"  "teleop"
+commands (string on /state_cmd): "patrol" "fetch" "idle" "teleop"
 
-Topics published:
-  /cmd_vel      geometry_msgs/Twist
-  /robot_state  std_msgs/String   — current state name, 20 Hz
+publishes:  /cmd_vel (Twist), /robot_state (String, current state @20hz)
+subscribes: /detections (Detection2DArray), /state_cmd (String),
+            /cmd_vel_teleop (Twist, used in teleop)
 
-Topics subscribed:
-  /detections       vision_msgs/Detection2DArray  (from yolo_detector)
-  /state_cmd        std_msgs/String
-  /cmd_vel_teleop   geometry_msgs/Twist           (used in TELEOP state)
-
-COCO trash classes targeted by default:
-  bottle(39) wine glass(40) cup(41) fork(42) knife(43)
-  spoon(44) bowl(45) book(73) scissors(76)
+default coco trash classes: bottle(39) wine glass(40) cup(41) fork(42)
+knife(43) spoon(44) bowl(45) book(73) scissors(76)
 """
 
 import random
@@ -105,7 +98,7 @@ class StateMachineNode(Node):
         self._latest_detections  = []
         self._teleop_twist       = Twist()
         self._teleop_recv_time   = None
-        self._log_times          = {}   # key → rclpy.Time, for throttled logging
+        self._log_times          = {}   # key -> time, for throttled logging
 
         self.cmd_pub   = self.create_publisher(Twist,  '/cmd_vel',     10)
         self.state_pub = self.create_publisher(String, '/robot_state', 10)
@@ -117,16 +110,16 @@ class StateMachineNode(Node):
         self.create_timer(1.0 / p('loop_hz'), self._tick)
         self.get_logger().info('state_machine ready  state=IDLE')
 
-    # ── Logging helpers ───────────────────────────────────────────────────────
+    # ── logging helpers ───────────────────────────────────────────────────────
     def _tlog(self, key, msg, period=1.0):
-        """Log msg at most once every `period` seconds for the given key."""
+        # log msg at most once every `period` seconds for the given key
         now  = self.get_clock().now()
         last = self._log_times.get(key)
         if last is None or (now - last).nanoseconds * 1e-9 >= period:
             self._log_times[key] = now
             self.get_logger().info(msg)
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    # ── helpers ───────────────────────────────────────────────────────────────
     def _transition(self, new_state: State):
         if new_state == self.state:
             return
@@ -170,7 +163,7 @@ class StateMachineNode(Node):
         name = COCO_NAMES.get(hyp.class_id, f'cls{hyp.class_id}')
         return f'{name} {hyp.score*100:.0f}%'
 
-    # ── Callbacks ─────────────────────────────────────────────────────────────
+    # ── callbacks ─────────────────────────────────────────────────────────────
     def _det_cb(self, msg: Detection2DArray):
         self._latest_detections = msg.detections
 
@@ -192,7 +185,7 @@ class StateMachineNode(Node):
         self._teleop_twist     = msg
         self._teleop_recv_time = self.get_clock().now()
 
-    # ── Main tick ─────────────────────────────────────────────────────────────
+    # ── main tick ─────────────────────────────────────────────────────────────
     def _tick(self):
         msg = String()
         msg.data = self.state.value
@@ -209,7 +202,7 @@ class StateMachineNode(Node):
         }
         dispatch[self.state]()
 
-    # ── State handlers ────────────────────────────────────────────────────────
+    # ── state handlers ────────────────────────────────────────────────────────
     def _tick_idle(self):
         self._stop()
 
@@ -319,7 +312,7 @@ class StateMachineNode(Node):
             self._transition(State.IDLE)
 
     def _tick_teleop(self):
-        # Watchdog: stop if no fresh cmd received within 0.5s
+        # watchdog: stop if no fresh cmd received within 0.5s
         if self._teleop_recv_time is not None:
             age = (self.get_clock().now() - self._teleop_recv_time).nanoseconds * 1e-9
             if age > 0.5:
