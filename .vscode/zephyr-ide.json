@@ -10,9 +10,10 @@
           "name": "build/nucleo_l476rg",
           "westBuildArgs": [],
           "westBuildCMakeArgs": [
-            "-DCONFIG_SPEED_OPTIMIZATIONS=y"
+            "-DCONFIG_DEBUG_OPTIMIZATIONS=y",
+            "-DCONFIG_DEBUG_THREAD_INFO=y"
           ],
-          "debugOptimization": "Speed",
+          "debugOptimization": "Debug",
           "confFiles": {
             "config": [],
             "overlay": []
@@ -31,12 +32,7 @@
       },
       "twisterConfigs": {},
       "confFiles": {
-        "config": [
-          {
-            "path": "zephyr/prj.conf",
-            "extra": false
-          }
-        ],
+        "config": [],
         "overlay": []
       }
     }

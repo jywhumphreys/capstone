@@ -1,98 +1,70 @@
-# Jetson Capstone — Autonomous Trash-Picking Robot
+# jetson capstone — autonomous trash-picking robot
 
-Roomba/Wall-E style autonomous robot built on a Jetson Orin Nano. Patrols a room, detects trash using YOLO vision, approaches and collects objects, returns to deposit location. Accessible via web dashboard over WiFi.
+roomba/wall-e style robot on a jetson orin nano. patrols a room, detects trash with yolo vision, drives over and collects it with a small arm + gripper, drops it in an onboard hopper. mecanum drive for holonomic motion. accessible over wifi via a web dashboard.
+
+two computers:
+- **jetson** — vision, navigation, ros2, dashboard
+- **stm32** — real-time motor/servo/actuator control (zephyr rtos), talks to the jetson over uart
 
 ---
 
-## Hardware
+## hardware
 
-| Component | Details |
+| component | details |
 |---|---|
-| Main computer | Jetson Orin Nano, JetPack 6.2, Ubuntu 22.04 |
-| Microcontroller | STM32 Nucleo-L476RG |
-| Motors | 4x Pololu 131:1 37D gearmotors with 64 CPR encoders |
-| Motor drivers | 2x Cytron MDD10A (dual channel) |
-| Arm servos | Hiwonder HTD-45H serial bus servos, 2-DOF |
-| Camera | USB webcam on /dev/video0 |
-| Power | 3S LiPo (9.9V–12.6V) |
-| Drive | Mecanum wheel (4-wheel holonomic) |
+| main computer | jetson orin nano super dev kit (8gb), jetpack 6.2 |
+| microcontroller | stm32 nucleo (f072rb; portable to l476rg / g474re) |
+| drive | 4x pololu 131:1 37D gearmotors (64 CPR encoders), 2x cytron MDD10A, mecanum wheels |
+| arm | 3x hiwonder HTD-45H serial bus servos (base/shoulder/elbow) |
+| gripper | hiwonder HPS-2527 (270° pwm servo) |
+| hopper | progressive automations PA-MC1 linear actuator via TB6612FNG |
+| camera | logitech c920 (usb) |
+| power | zeee 3s lipo, 5200mAh 50C 11.1V, xt60 |
 
 ---
 
-## Software Stack
+## firmware — `zephyr/`
 
-- ROS2 Humble (Ubuntu 22.04)
-- Python 3.10, CUDA 12.6, TensorRT 10.3.0
-- Ultralytics YOLO — YOLOv2 6n exported to TensorRT FP16
+zephyr rtos app. the hardware mapping lives entirely in the devicetree overlay, so the same code runs on different nucleo boards by swapping the overlay — verified building on f072rb, l476rg and g474re.
 
----
+subsystems (each bench-tested):
+- **motors** — sign-magnitude mecanum drive, inverse kinematics, `motor_set` / `mecanum_drive`
+- **gripper** — pwm servo, clamped to a calibrated open/closed band
+- **hopper** — TB6612FNG dir-only control, timed move (no feedback, internal limit switches)
+- **servo** — HTD-45H half-duplex bus protocol on usart3 (move / read position / set id / torque)
+- **comms** — uart packet protocol to/from the jetson (drive in, odom out)
 
-## ROS2 Packages
+`main.c` has a `TEST_MODE` selector — per-subsystem bench tests plus a combined demo that runs all four in sequence with no jetson attached.
 
-### yolo_detector
-Reads webcam, runs TensorRT inference at ~15fps, publishes detections and annotated image. Decoupled capture/inference threading prevents stutter — capture thread always overwrites latest frame, inference timer drops ticks if previous inference is still running.
-
-### state_machine
-Robot brain. States: IDLE, PATROL, APPROACH, COLLECT, DEPOSIT, FETCH, TELEOP. Patrol wanders randomly and interrupts to approach detected trash. Approach uses P-control on bounding box horizontal error. Teleop has a 0.5s watchdog that stops the robot if no command arrives (protects against browser disconnect).
-
-### drive_node
-Converts `/cmd_vel` Twist into wheel speed setpoints using mecanum inverse kinematics. Normalises against max linear speed so pure forward = 100% on all wheels. Proportionally scales down if combined commands exceed limits.
-
-### stm32_bridge
-Translates `/wheel_speeds` into UART binary packets to the STM32, and receives encoder odometry back. Node is written and ready — not yet added to launch (waiting on STM32 firmware flash + UART wiring).
-
-### robot_dashboard
-Web dashboard served on port 8888. Uses roslibjs + rosbridge (port 9090) for ROS communication, MJPEG stream from web_video_server (port 8080) for camera feed.
-
-**Dashboard features:**
-- Live camera feed
-- State badge (colour-coded per state)
-- Battery voltage + bar (needs STM32 wiring)
-- E-stop button
-- Command buttons: PATROL / FETCH / TELEOP / IDLE
-- Teleop dpad + WASD keyboard, speed slider (5–100%), auto-switches to TELEOP on first keypress
-- Vision card: detection FPS, object count, confidence, per-object list
-- Wheel speed bars (centre-anchored, green/red)
-- System graph: 60s rolling CPU/GPU/RAM chart
-- Log: /rosout feed with warn/error colouring
-
-### system_monitor
-Publishes `/system_stats` JSON at 1Hz (CPU, RAM, GPU, temperature). GPU polled at 10Hz with EMA smoothing (α=0.15) to handle irregular sysfs update timing.
+build/flash:
+```
+$env:ZEPHYR_BASE="<path>/zephyr"
+west build -b nucleo_f072rb zephyr
+west flash
+```
 
 ---
 
-## Access
+## jetson — `ros2_ws/`
 
-- **Dashboard**: http://nano.local:8888
-- **SSH**: `ssh justin@nano.local`
-- **Static IP**: 192.168.1.74 (home WiFi)
+ros2 humble. packages:
+
+- **yolo_detector** — c920 -> yolo (tensorrt fp16) at ~15fps. publishes `/detections` + annotated `/camera/image_raw`.
+- **state_machine** — the brain: patrol / approach / collect / deposit / fetch / teleop / idle. subscribes `/detections`, `/state_cmd`, `/cmd_vel_teleop`; publishes `/cmd_vel`, `/robot_state`. teleop has a 0.5s watchdog.
+- **drive_node** — `/cmd_vel` -> `/wheel_speeds` via mecanum inverse kinematics, normalised. params for wheel radius / wheelbase / max vel and per-wheel invert.
+- **stm32_bridge** — `/wheel_speeds` -> uart packets on `/dev/ttyTHS1` @115200, encoders back on `/wheel_encoders`. written, not yet in the launch file.
+- **robot_dashboard** — web ui on `:8888` (rosbridge `:9090`, web_video_server `:8080` for the mjpeg feed). `system_monitor` publishes `/system_stats`.
+
+bring it all up (minus stm32_bridge):
+```
+ros2 launch robot_dashboard dashboard.launch.py
+```
 
 ---
 
-## Autostart
+## autostart — `scripts/`
 
-Systemd service (`robot.service`) launches everything on boot via `~/start_robot.sh`. Starts after `network-online.target` with a 10s delay to let networking settle.
+- **robot.service** — systemd unit, starts on boot after the network is up (10s settle, restart on failure)
+- **start_robot.sh** — sources ros2 + the workspace and launches the dashboard
 
----
-
-## What's Done
-
-- [x] YOLO TensorRT inference pipeline (decoupled threading, ~15fps)
-- [x] State machine: PATROL, APPROACH, COLLECT, DEPOSIT, FETCH, TELEOP, IDLE
-- [x] Mecanum drive node with proper normalisation
-- [x] STM32 bridge node (UART protocol, pending hardware)
-- [x] STM32 firmware (pending flash)
-- [x] Web dashboard (camera, state, teleop, vision, wheel speeds, system stats, log)
-- [x] Teleop watchdog safety feature
-- [x] Responsive dashboard layout (CSS clamp)
-- [x] Systemd autostart (boot ordering bug fixed)
-
-## What's Next
-
-- [ ] Flash STM32 firmware, wire UART
-- [ ] Test motor control end-to-end, tune PWM scaling
-- [ ] Wire battery voltage sense (STM32 ADC → UART → /battery_voltage)
-- [ ] Wheel odometry node
-- [ ] Field-oriented teleop (rotate commands into robot frame using heading)
-- [ ] Arm node (HTD-45H servos)
-- [ ] Nav2 / room mapping integration
+access: dashboard at `http://nano.local:8888`, ssh `justin@nano.local`.
