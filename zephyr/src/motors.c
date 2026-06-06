@@ -23,13 +23,14 @@ static const struct gpio_dt_spec motor_dir[MOTOR_COUNT] = {
     GPIO_DT_SPEC_GET_BY_IDX(MOTORS_NODE, dir_gpios, 3),
 };
 
-// right wheels are mounted mirrored, so positive = forward needs the opposite
-// dir level. flip an entry if a wheel spins the wrong way
+// per-wheel direction. all four were reversed vs the kinematics convention
+// (whole robot drove backwards), so the left/right sense is flipped from the
+// naive mirror. flip an entry if a single wheel spins the wrong way
 static const bool motor_invert[MOTOR_COUNT] = {
-    false,  // FL
-    true,   // FR
-    false,  // RL
-    true,   // RR
+    true,   // FL
+    false,  // FR
+    true,   // RL
+    false,  // RR
 };
 
 int motors_init(void)

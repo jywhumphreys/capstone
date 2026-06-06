@@ -150,9 +150,9 @@ static void apply_packet(uint8_t cmd, const uint8_t *p, uint8_t len)
     case CMD_ARM: {
         if (len != ARM_PAYLOAD_LEN) break;
         uint16_t t = leu16(p + 6);
-        servo_move(SERVO_ID_BASE,     le16(p)     / 10.0f, t);
-        servo_move(SERVO_ID_SHOULDER, le16(p + 2) / 10.0f, t);
-        servo_move(SERVO_ID_ELBOW,    le16(p + 4) / 10.0f, t);
+        servo_move(SERVO_ID_SHOULDER,     le16(p)     / 10.0f, t);
+        servo_move(SERVO_ID_ELBOW, le16(p + 2) / 10.0f, t);
+        servo_move(SERVO_ID_WRIST,    le16(p + 4) / 10.0f, t);
         break;
     }
     }

@@ -5,10 +5,10 @@
 #include <stdbool.h>
 
 // hiwonder HTD-45H bus servos, daisy-chained on usart3 (half-duplex, 115200).
-// the three arm joints:
-#define SERVO_ID_BASE      1
-#define SERVO_ID_SHOULDER  2
-#define SERVO_ID_ELBOW     3
+// the three arm joints (planar arm: shoulder -> elbow -> wrist):
+#define SERVO_ID_SHOULDER  1
+#define SERVO_ID_ELBOW     2
+#define SERVO_ID_WRIST     3
 
 // broadcast: every servo obeys, none reply. only use with one servo connected
 #define SERVO_ID_BROADCAST 0xFEu

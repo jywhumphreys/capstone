@@ -1,5 +1,8 @@
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/uart.h>
+#include <zephyr/device.h>
 #include <math.h>
+#include <stdlib.h>
 #include "comms.h"
 #include "motors.h"
 #include "gripper.h"
@@ -11,36 +14,26 @@
 #define TEST_DRIVE    1   // mecanum demo
 #define TEST_GRIPPER  2   // gripper open/close
 #define TEST_HOPPER   3   // actuator extend/retract
-#define TEST_ARM      4   // arm servos, ping-pong 1-2-3-2-1
+#define TEST_ARM      4   // interactive: set arm angles over serial
 #define TEST_SET_ID   5   // assign an id to a single connected servo
 #define TEST_SWAP_ID  6   // swap two ids on the chain
-#define TEST_DEMO     7   // all subsystems in sequence
+#define TEST_DEMO     7   // full pick-and-drop + hopper routine
 
 #define TEST_MODE     TEST_DEMO
 
 // TEST_SET_ID: id to assign. connect exactly one servo, flash, repeat per servo
-#define SET_ID_TARGET  SERVO_ID_ELBOW
+#define SET_ID_TARGET  SERVO_ID_WRIST
 
 // TEST_SWAP_ID: swap these two, routed through a temp id so no collision
-#define SWAP_ID_A      SERVO_ID_SHOULDER
-#define SWAP_ID_B      SERVO_ID_ELBOW
+#define SWAP_ID_A      SERVO_ID_ELBOW
+#define SWAP_ID_B      SERVO_ID_WRIST
 #define SWAP_ID_TEMP   10
 
 #define DRIVE_SPEED            100    // TEST_DRIVE wheel speed 0..100
-#define HOPPER_TEST_TRAVEL_MS 3000    // TEST_HOPPER drive time per direction
+#define HOPPER_TEST_TRAVEL_MS 3000    // hopper drive time per direction
 #define HOPPER_TEST_PAUSE_MS  2000
 
 #if TEST_MODE == TEST_DRIVE
-
-// run one mecanum motion for ms, then stop
-static void demo(const char *label, int vx, int vy, int omega, int ms)
-{
-    printk("%s\n", label);
-    mecanum_drive(vx, vy, omega);
-    k_msleep(ms);
-    motor_stop_all();
-    k_msleep(400);
-}
 
 int main(void)
 {
@@ -49,47 +42,17 @@ int main(void)
         return 0;
     }
 
-    const int S = DRIVE_SPEED;
-
-    printk("\n=== mecanum demo ===\n");
-
-    while (1) {
-        // cardinals
-        demo("forward",         S,  0,    0, 1200);
-        demo("backward",       -S,  0,    0, 1200);
-        demo("strafe left",     0,  S,    0, 1200);
-        demo("strafe right",    0, -S,    0, 1200);
-
-        // diagonals (translate at 45 deg, no rotation)
-        demo("diag fwd-right",  S, -S,    0, 1000);
-        demo("diag back-left", -S,  S,    0, 1000);
-        demo("diag fwd-left",   S,  S,    0, 1000);
-        demo("diag back-right",-S, -S,    0, 1000);
-
-        // rotate in place
-        demo("spin CCW",        0,  0,    S, 1500);
-        demo("spin CW",         0,  0,   -S, 1500);
-
-        // drive + turn at once
-        demo("arc fwd + CCW",   S,  0,  S/2, 1500);
-        demo("arc fwd + CW",    S,  0, -S/2, 1500);
-
-        // strafe a square without turning the body
-        printk("-- holonomic square --\n");
-        demo("  side 1 (fwd)",   S,  0,  0, 900);
-        demo("  side 2 (right)", 0, -S,  0, 900);
-        demo("  side 3 (back)", -S,  0,  0, 900);
-        demo("  side 4 (left)",  0,  S,  0, 900);
-
-        demo("pirouette",        0,  0,  S, 2500);
-
-        printk("--- demo complete, pausing ---\n");
-        motor_stop_all();
-        k_msleep(2000);
-    }
+    printk("drive: backward 2s\n");
+    mecanum_drive(-DRIVE_SPEED, 0, 0);
+    k_msleep(2000);
+    motor_stop_all();
+    return 0;
 }
 
 #elif TEST_MODE == TEST_GRIPPER
+
+#define OPEN_POSITION 10   // open
+#define GRAB_POSITION 30   // grab (closed)
 
 int main(void)
 {
@@ -98,17 +61,13 @@ int main(void)
         return 0;
     }
 
-    printk("\n=== gripper test (close, hold 10s, open) ===\n");
+    printk("gripper: open\n");
+    gripper_set(OPEN_POSITION);
+    k_msleep(1500);
 
-    while (1) {
-        printk("gripper: close\n");
-        gripper_set(100);          // clamps to closed limit
-        k_msleep(10000);
-
-        printk("gripper: open\n");
-        gripper_set(0);            // clamps to open limit
-        k_msleep(2000);
-    }
+    printk("gripper: grab at %d\n", GRAB_POSITION);
+    gripper_set(GRAB_POSITION);
+    return 0;
 }
 
 #elif TEST_MODE == TEST_HOPPER
@@ -120,42 +79,46 @@ int main(void)
         return 0;
     }
 
-    printk("\n=== hopper test ===\n");
-
-    while (1) {
-        printk("hopper: extend\n");
-        hopper_extend();
-        k_msleep(HOPPER_TEST_TRAVEL_MS);
-        hopper_stop();
-        k_msleep(HOPPER_TEST_PAUSE_MS);
-
-        printk("hopper: retract\n");
-        hopper_retract();
-        k_msleep(HOPPER_TEST_TRAVEL_MS);
-        hopper_stop();
-        k_msleep(HOPPER_TEST_PAUSE_MS);
-    }
+    printk("hopper: lower (retract)\n");
+    hopper_retract();
+    k_msleep(HOPPER_TEST_TRAVEL_MS);
+    hopper_stop();
+    return 0;
 }
 
 #elif TEST_MODE == TEST_ARM
 
-// cycle all three in a ping-pong order, each alternating between two angles.
-// 30..210 leaves ~30 deg margin off the hard stops — narrow if mounted tight
-#define ARM_TEST_A_DEG    30.0f
-#define ARM_TEST_B_DEG    210.0f
-#define ARM_TEST_TIME_MS  1000
-#define ARM_TEST_PAUSE_MS 500
+// interactive arm angle setter over the serial console. starts all three at
+// center (120), then type "<id 1-3> <deg>" (e.g. "2 124.5") to move one joint,
+// or "c" to recenter. moves are slow so a fat-finger won't slam the arm.
+static const struct device *const cons = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
-static void arm_report(uint8_t id)
+#define SET_MOVE_MS 800
+
+static void read_line(char *buf, int max)
 {
-    float deg = servo_read_pos(id);
-    if (isnan(deg)) {
-        printk("servo %u: no response\n", id);
-    } else {
-        int tenths = (int)(deg * 10.0f);   // %f isn't enabled
-        printk("servo %u: %d.%d deg\n", id,
-               tenths / 10, (tenths < 0 ? -tenths : tenths) % 10);
+    int i = 0;
+    while (1) {
+        uint8_t c;
+        if (uart_poll_in(cons, &c) == 0) {
+            if (c == '\r' || c == '\n') {
+                if (i > 0) { buf[i] = '\0'; return; }
+            } else if ((c == 0x08 || c == 0x7f) && i > 0) {
+                i--;                          // backspace
+            } else if (i < max - 1) {
+                buf[i++] = c;
+            }
+        } else {
+            k_msleep(2);
+        }
     }
+}
+
+static void arm_goto(uint8_t id, float deg)
+{
+    servo_move(id, deg, SET_MOVE_MS);
+    int t = (int)(deg * 10.0f);              // %f isn't enabled
+    printk("servo %u -> %d.%d deg\n", id, t / 10, (t < 0 ? -t : t) % 10);
 }
 
 int main(void)
@@ -165,29 +128,34 @@ int main(void)
         return 0;
     }
 
-    printk("\n=== arm test (1 -> 2 -> 3 -> 2 -> 1 ...) ===\n");
-
-    servo_set_torque(SERVO_ID_BASE, true);
     servo_set_torque(SERVO_ID_SHOULDER, true);
     servo_set_torque(SERVO_ID_ELBOW, true);
+    servo_set_torque(SERVO_ID_WRIST, true);
 
-    // looping this gives 1,2,3,2,1,2,3,2,...
-    static const uint8_t order[] = {
-        SERVO_ID_BASE, SERVO_ID_SHOULDER, SERVO_ID_ELBOW, SERVO_ID_SHOULDER
-    };
-    bool at_b[SERVO_ID_ELBOW + 1] = { false };
+    arm_goto(SERVO_ID_SHOULDER, 120.0f);     // start from center
+    arm_goto(SERVO_ID_ELBOW,    120.0f);
+    arm_goto(SERVO_ID_WRIST,    120.0f);
 
+    printk("\narm angle setter — type \"<id 1-3> <deg>\" (e.g. \"2 124.5\"), or \"c\" to center\n");
+
+    char line[32];
     while (1) {
-        for (int i = 0; i < (int)ARRAY_SIZE(order); i++) {
-            uint8_t id = order[i];
-            float target = at_b[id] ? ARM_TEST_A_DEG : ARM_TEST_B_DEG;
-            at_b[id] = !at_b[id];
+        read_line(line, sizeof(line));
 
-            printk("-> servo %u\n", id);
-            servo_move(id, target, ARM_TEST_TIME_MS);
-            k_msleep(ARM_TEST_TIME_MS + ARM_TEST_PAUSE_MS);
-            arm_report(id);
+        if (line[0] == 'c') {
+            arm_goto(SERVO_ID_SHOULDER, 120.0f);
+            arm_goto(SERVO_ID_ELBOW,    120.0f);
+            arm_goto(SERVO_ID_WRIST,    120.0f);
+            continue;
         }
+
+        char *end;
+        long id = strtol(line, &end, 10);
+        if (end == line || id < 1 || id > 3) {
+            printk("? use \"<id 1-3> <deg>\" or \"c\"\n");
+            continue;
+        }
+        arm_goto((uint8_t)id, (float)strtod(end, NULL));
     }
 }
 
@@ -251,59 +219,105 @@ int main(void)
 
 #elif TEST_MODE == TEST_DEMO
 
-// self-contained showcase: drive -> gripper -> hopper -> arm, looping. one
-// subsystem at a time so peak power stays bounded. no jetson needed
+// drive demo — the arm is never touched. strafe out and back to center in all
+// 8 directions, tip the hopper, cycle the gripper, then a rotate flourish.
+#define DEMO_SPEED       100
+#define OUT_MS           800     // strafe out (and back) duration
+#define GRIP_OPEN        10
+#define GRIP_CLOSED      30
+#define GRIP_MS          800
+#define SPIN_MS_PER_DEG  25      // at DEMO_SPEED 100 (180 deg = 4500 ms)
+
+// arm start pose — set once, then left untouched. shoulder/elbow/wrist
+#define ARM_S  130.0f
+#define ARM_E  200.0f
+#define ARM_W   90.0f
+
+// drive a vector out for OUT_MS, then the reverse to return to center
+static void out_back(int vx, int vy)
+{
+    mecanum_drive(vx, vy, 0);
+    k_msleep(OUT_MS);
+    motor_stop_all();
+    k_msleep(400);
+    mecanum_drive(-vx, -vy, 0);
+    k_msleep(OUT_MS);
+    motor_stop_all();
+    k_msleep(600);
+}
+
+// spin in place: dir +1 = ccw, -1 = cw
+static void spin_deg(int dir, int deg)
+{
+    mecanum_drive(0, 0, dir * DEMO_SPEED);
+    k_msleep(deg * SPIN_MS_PER_DEG);
+    motor_stop_all();
+    k_msleep(400);
+}
+
 int main(void)
 {
     motors_init();
     gripper_init();
     hopper_init();
+
+    const int S = DEMO_SPEED;
+
+    printk("\n=== drive demo ===\n");
+
+    // set the arm to its start pose (then leave it), and close the hopper
+    printk("reset: arm + hopper\n");
     servo_init();
-
-    const int S = 80;   // a touch under full for control
-
-    printk("\n=== robot demo ===\n");
-
-    servo_set_torque(SERVO_ID_BASE, true);
     servo_set_torque(SERVO_ID_SHOULDER, true);
     servo_set_torque(SERVO_ID_ELBOW, true);
+    servo_set_torque(SERVO_ID_WRIST, true);
+    hopper_retract();                       // close the hopper while the arm moves
+    servo_move(SERVO_ID_SHOULDER, ARM_S, 1500);
+    servo_move(SERVO_ID_ELBOW,    ARM_E, 1500);
+    servo_move(SERVO_ID_WRIST,    ARM_W, 1500);
+    k_msleep(2000);
+    hopper_stop();
 
-    while (1) {
-        // drive — a sampler of mecanum moves
-        printk("[drive] forward\n");
-        mecanum_drive(S, 0, 0);   k_msleep(1200); motor_stop_all(); k_msleep(400);
-        printk("[drive] strafe right\n");
-        mecanum_drive(0, -S, 0);  k_msleep(1200); motor_stop_all(); k_msleep(400);
-        printk("[drive] diagonal\n");
-        mecanum_drive(S, S, 0);   k_msleep(1000); motor_stop_all(); k_msleep(400);
-        printk("[drive] spin\n");
-        mecanum_drive(0, 0, S);   k_msleep(1500); motor_stop_all(); k_msleep(600);
+    // hold before the demo begins
+    printk("starting in 5s...\n");
+    k_msleep(5000);
 
-        // gripper
-        printk("[gripper] open\n");
-        gripper_set(0);    k_msleep(1200);
-        printk("[gripper] close\n");
-        gripper_set(100);  k_msleep(1200);
+    // 8 directions, each out then back to center
+    printk("forward\n");    out_back( S,  0);
+    printk("backward\n");   out_back(-S,  0);
+    printk("left\n");       out_back( 0,  S);
+    printk("right\n");      out_back( 0, -S);
+    printk("fwd-left\n");   out_back( S,  S);
+    printk("fwd-right\n");  out_back( S, -S);
+    printk("back-left\n");  out_back(-S,  S);
+    printk("back-right\n"); out_back(-S, -S);
 
-        // hopper
-        printk("[hopper] extend\n");
-        hopper_extend();   k_msleep(3000); hopper_stop(); k_msleep(800);
-        printk("[hopper] retract\n");
-        hopper_retract();  k_msleep(3000); hopper_stop(); k_msleep(800);
+    // tip the hopper, then bring it back
+    printk("tip hopper\n");
+    hopper_extend();
+    k_msleep(HOPPER_TEST_TRAVEL_MS);
+    hopper_stop();
+    k_msleep(HOPPER_TEST_PAUSE_MS);
+    hopper_retract();
+    k_msleep(HOPPER_TEST_TRAVEL_MS);
+    hopper_stop();
+    k_msleep(HOPPER_TEST_PAUSE_MS);
 
-        // arm — home, then a little elbow wave
-        printk("[arm] pose + wave\n");
-        servo_move(SERVO_ID_BASE,     120.0f, 800);
-        servo_move(SERVO_ID_SHOULDER, 120.0f, 800);
-        servo_move(SERVO_ID_ELBOW,    120.0f, 800);
-        k_msleep(1000);
-        servo_move(SERVO_ID_ELBOW,     80.0f, 600); k_msleep(800);
-        servo_move(SERVO_ID_ELBOW,    160.0f, 600); k_msleep(800);
-        servo_move(SERVO_ID_ELBOW,    120.0f, 600); k_msleep(800);
+    // open and close the gripper
+    printk("gripper open\n");
+    gripper_set(GRIP_OPEN);
+    k_msleep(GRIP_MS + 600);
+    printk("gripper close\n");
+    gripper_set(GRIP_CLOSED);
+    k_msleep(GRIP_MS + 600);
 
-        printk("--- demo complete, pausing ---\n");
-        k_msleep(3000);
-    }
+    // rotate: cw 30, ccw 60, cw 30 -> back to center
+    printk("rotate cw 30\n");   spin_deg(-1, 30);
+    printk("rotate ccw 60\n");  spin_deg(+1, 60);
+    printk("rotate cw 30\n");   spin_deg(-1, 30);
+
+    printk("--- demo complete ---\n");
+    return 0;
 }
 
 #else  // TEST_NONE — normal uart operation
