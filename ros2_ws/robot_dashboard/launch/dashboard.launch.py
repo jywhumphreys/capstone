@@ -46,6 +46,9 @@ def generate_launch_description():
         Node(package='drive_node', executable='drive_node',
              name='drive_node', output='screen'),
 
+        Node(package='stm32_bridge', executable='bridge_node',
+             name='stm32_bridge', output='screen'),
+
         Node(package='robot_dashboard', executable='system_monitor',
              name='system_monitor', output='screen'),
     ])

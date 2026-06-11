@@ -19,7 +19,7 @@
 #define TEST_SWAP_ID  6   // swap two ids on the chain
 #define TEST_DEMO     7   // full pick-and-drop + hopper routine
 
-#define TEST_MODE     TEST_DEMO
+#define TEST_MODE     TEST_NONE
 
 // TEST_SET_ID: id to assign. connect exactly one servo, flash, repeat per servo
 #define SET_ID_TARGET  SERVO_ID_WRIST
