@@ -40,7 +40,7 @@ CMD_HOPPER  = 0x04
 CMD_ARM     = 0x05
 
 ODOM_PAYLOAD_LEN = 16
-ARM_DEFAULT_TIME_MS = 800
+ARM_DEFAULT_TIME_MS = 1600   # arm move time; higher = slower/smoother
 
 
 def _chk(cmd: int, payload: bytes) -> int:

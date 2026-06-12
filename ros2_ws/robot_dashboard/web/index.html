@@ -190,9 +190,10 @@
     </div>
     <div style="font-size:0.7rem;color:#555;margin:8px 0 4px;">Arm</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-      <button onclick="armCmd(165,230,40)">Grab</button>
+      <button onclick="armCmd(80,230,40)">Grab</button>
       <button onclick="armCmd(120,110,30)">Drop</button>
       <button onclick="armCmd(120,120,120)">Home</button>
+      <button onclick="armCmd(80,50,220)">Serve</button>
     </div>
   </div>
 
@@ -406,13 +407,14 @@
   setInterval(() => {
     if (!heldKeys.size) return;
     const spd = parseFloat(document.getElementById('teleop-speed').value) / 100 * 0.5;
+    const rot = spd * 2;          // rotate faster than translate
     let vx = 0, vy = 0, wz = 0;
     if (heldKeys.has('w')) vx += spd;
     if (heldKeys.has('s')) vx -= spd;
     if (heldKeys.has('a')) vy += spd;
     if (heldKeys.has('d')) vy -= spd;
-    if (heldKeys.has('q')) wz += spd;
-    if (heldKeys.has('e')) wz -= spd;
+    if (heldKeys.has('q')) wz += rot;
+    if (heldKeys.has('e')) wz -= rot;
     publishTwist(vx, vy, wz);
   }, 100);
 
