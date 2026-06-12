@@ -176,6 +176,27 @@
   </div>
 
   <div class="card">
+    <h2>Manipulator <span style="font-size:0.65rem;color:#333;text-transform:none;letter-spacing:0;font-weight:400;">teleop only</span></h2>
+    <div style="font-size:0.7rem;color:#555;margin:0 0 4px;">Gripper</div>
+    <div class="cmd-grid">
+      <button onclick="gripperCmd(10)">Open</button>
+      <button onclick="gripperCmd(30)">Close</button>
+    </div>
+    <div style="font-size:0.7rem;color:#555;margin:8px 0 4px;">Hopper</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      <button onclick="hopperCmd(1)">Extend</button>
+      <button onclick="hopperCmd(2)">Retract</button>
+      <button onclick="hopperCmd(0)">Stop</button>
+    </div>
+    <div style="font-size:0.7rem;color:#555;margin:8px 0 4px;">Arm</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      <button onclick="armCmd(165,230,40)">Grab</button>
+      <button onclick="armCmd(120,110,30)">Drop</button>
+      <button onclick="armCmd(120,120,120)">Home</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Vision</h2>
     <div style="display:flex;flex-direction:column;gap:9px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -438,6 +459,17 @@
   // ── Commands ────────────────────────────────────────────────────────────
   const cmdPub = new ROSLIB.Topic({ ros, name: '/state_cmd', messageType: 'std_msgs/String' });
   function sendCmd(cmd) { cmdPub.publish(new ROSLIB.Message({ data: cmd })); }
+
+  // ── Manipulator (state machine forwards these only in teleop) ────────────
+  const gripperPub = new ROSLIB.Topic({ ros, name: '/gripper_cmd', messageType: 'std_msgs/Int32' });
+  const hopperPub  = new ROSLIB.Topic({ ros, name: '/hopper_cmd',  messageType: 'std_msgs/Int32' });
+  const armPub     = new ROSLIB.Topic({ ros, name: '/arm_cmd',     messageType: 'std_msgs/Float32MultiArray' });
+
+  // switch to teleop first, then publish shortly after so the forward gate is open
+  function manip(pub, msg) { sendCmd('teleop'); setTimeout(() => pub.publish(new ROSLIB.Message(msg)), 100); }
+  function gripperCmd(v)   { manip(gripperPub, { data: v }); }
+  function hopperCmd(v)    { manip(hopperPub,  { data: v }); }
+  function armCmd(s, e, w) { manip(armPub, { layout: { dim: [], data_offset: 0 }, data: [s, e, w] }); }
 </script>
 </body>
 </html>

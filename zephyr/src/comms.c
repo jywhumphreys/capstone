@@ -37,6 +37,14 @@ static uint8_t pkt_buf[RX_MAX_PAYLOAD];
 static uint32_t last_drive_ms;
 static uint32_t last_odom_ms;
 
+// status / debug (console = usart2 / st-link vcp)
+static volatile uint32_t dbg_rx_bytes;
+static volatile uint32_t dbg_pkt_ok;
+static volatile uint32_t dbg_pkt_bad;
+static uint32_t last_dbg_ms;
+static int      last_drive[4];      // last wheel cmd, for change-only logging
+static bool     link_lost = true;   // drive watchdog state (start stopped)
+
 static void uart_rx_callback(const struct device *dev, void *user_data);
 static void uart_output(void);
 
@@ -64,6 +72,7 @@ static void uart_rx_callback(const struct device *dev, void *user_data)
 
     uint8_t b;
     uart_fifo_read(dev, &b, 1);
+    dbg_rx_bytes++;
 
     switch (rx_state) {
     case RX_WAIT_H0:
@@ -101,12 +110,16 @@ static void uart_rx_callback(const struct device *dev, void *user_data)
     case RX_WAIT_CHK: {
         uint8_t chk = rx_cmd ^ rx_len;
         for (uint8_t i = 0; i < rx_len; i++) chk ^= rx_buf[i];
-        // drop the new packet if the last one isn't consumed yet
-        if (chk == b && !pkt_ready) {
-            pkt_cmd = rx_cmd;
-            pkt_len = rx_len;
-            memcpy(pkt_buf, rx_buf, rx_len);
-            pkt_ready = true;
+        if (chk == b) {
+            dbg_pkt_ok++;
+            if (!pkt_ready) {           // drop if the last packet isn't consumed
+                pkt_cmd = rx_cmd;
+                pkt_len = rx_len;
+                memcpy(pkt_buf, rx_buf, rx_len);
+                pkt_ready = true;
+            }
+        } else {
+            dbg_pkt_bad++;
         }
         rx_state = RX_WAIT_H0;
         break;
@@ -128,31 +141,52 @@ static uint16_t leu16(const uint8_t *p)
 static void apply_packet(uint8_t cmd, const uint8_t *p, uint8_t len)
 {
     switch (cmd) {
-    case CMD_DRIVE:
+    case CMD_DRIVE: {
         if (len != DRIVE_PAYLOAD_LEN) break;
-        motor_set_all(le16(p) / 10, le16(p + 2) / 10,      // +/-1000 -> +/-100
-                      le16(p + 4) / 10, le16(p + 6) / 10);
+        int w[4] = { le16(p) / 10, le16(p + 2) / 10,        // +/-1000 -> +/-100
+                     le16(p + 4) / 10, le16(p + 6) / 10 };
+        motor_set_all(w[0], w[1], w[2], w[3]);
         last_drive_ms = k_uptime_get_32();
+        if (link_lost) {
+            link_lost = false;
+            printk("[comms] drive link up\n");
+        }
+        // log only when the command changes (the jetson streams at 20 Hz)
+        if (memcmp(w, last_drive, sizeof(w)) != 0) {
+            memcpy(last_drive, w, sizeof(w));
+            if (!w[0] && !w[1] && !w[2] && !w[3]) {
+                printk("[comms] drive  stop\n");
+            } else {
+                printk("[comms] drive  FL=%d FR=%d RL=%d RR=%d\n",
+                       w[0], w[1], w[2], w[3]);
+            }
+        }
         break;
+    }
 
     case CMD_GRIPPER:
         if (len != GRIPPER_PAYLOAD_LEN) break;
         gripper_set(p[0]);
+        printk("[comms] gripper -> %u  (%s)\n", p[0],
+               p[0] <= 15 ? "open" : "close");
         break;
 
     case CMD_HOPPER:
         if (len != HOPPER_PAYLOAD_LEN) break;
-        if (p[0] == HOPPER_ACT_EXTEND)       hopper_extend();
-        else if (p[0] == HOPPER_ACT_RETRACT) hopper_retract();
-        else                                 hopper_stop();
+        if (p[0] == HOPPER_ACT_EXTEND)       { hopper_extend();  printk("[comms] hopper -> extend\n"); }
+        else if (p[0] == HOPPER_ACT_RETRACT) { hopper_retract(); printk("[comms] hopper -> retract\n"); }
+        else                                 { hopper_stop();    printk("[comms] hopper -> stop\n"); }
         break;
 
     case CMD_ARM: {
         if (len != ARM_PAYLOAD_LEN) break;
         uint16_t t = leu16(p + 6);
-        servo_move(SERVO_ID_SHOULDER,     le16(p)     / 10.0f, t);
-        servo_move(SERVO_ID_ELBOW, le16(p + 2) / 10.0f, t);
-        servo_move(SERVO_ID_WRIST,    le16(p + 4) / 10.0f, t);
+        int s = le16(p), e = le16(p + 2), w = le16(p + 4);   // tenths of a degree
+        servo_move(SERVO_ID_SHOULDER, s / 10.0f, t);
+        servo_move(SERVO_ID_ELBOW,    e / 10.0f, t);
+        servo_move(SERVO_ID_WRIST,    w / 10.0f, t);
+        printk("[comms] arm -> shoulder=%d elbow=%d wrist=%d deg  (%ums)\n",
+               s / 10, e / 10, w / 10, t);
         break;
     }
     }
@@ -192,9 +226,20 @@ void uart_tick(void)
 
     uint32_t now = k_uptime_get_32();
 
+    // status heartbeat every 2s — link state + packet tally
+    if ((now - last_dbg_ms) >= 2000u) {
+        last_dbg_ms = now;
+        printk("[comms] link %s  rx=%uB pkts=%u bad=%u\n",
+               link_lost ? "IDLE" : "ok", dbg_rx_bytes, dbg_pkt_ok, dbg_pkt_bad);
+    }
+
     // drive watchdog — stop the wheels if no drive command in 500ms
     if ((now - last_drive_ms) >= DRIVE_WATCHDOG_MS) {
-        motor_stop_all();
+        if (!link_lost) {
+            link_lost = true;
+            motor_stop_all();
+            printk("[comms] drive watchdog: no command 500ms -> motors stopped\n");
+        }
     }
 
     // odom at 50 Hz

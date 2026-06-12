@@ -330,6 +330,8 @@ int main(void)
     servo_init();
     uart_init();
 
+    printk("\n=== uart command mode ===\n");
+
     while (1) {
         uart_tick();
         hopper_tick();

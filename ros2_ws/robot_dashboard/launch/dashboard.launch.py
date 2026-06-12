@@ -47,7 +47,9 @@ def generate_launch_description():
              name='drive_node', output='screen'),
 
         Node(package='stm32_bridge', executable='bridge_node',
-             name='stm32_bridge', output='screen'),
+             name='stm32_bridge',
+             parameters=[{'serial_port': '/dev/ttyTHS1'}],
+             output='screen'),
 
         Node(package='robot_dashboard', executable='system_monitor',
              name='system_monitor', output='screen'),

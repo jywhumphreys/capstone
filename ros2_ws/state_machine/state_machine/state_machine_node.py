@@ -27,7 +27,7 @@ from enum import Enum
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32, Float32MultiArray
 from vision_msgs.msg import Detection2DArray
 
 
@@ -103,9 +103,19 @@ class StateMachineNode(Node):
         self.cmd_pub   = self.create_publisher(Twist,  '/cmd_vel',     10)
         self.state_pub = self.create_publisher(String, '/robot_state', 10)
 
+        # manipulator outputs to the stm32 bridge
+        self.gripper_pub = self.create_publisher(Int32,             '/gripper', 10)
+        self.hopper_pub  = self.create_publisher(Int32,             '/hopper',  10)
+        self.arm_pub     = self.create_publisher(Float32MultiArray, '/arm',     10)
+
         self.create_subscription(Detection2DArray, '/detections',     self._det_cb,    10)
         self.create_subscription(String,           '/state_cmd',      self._cmd_cb,    10)
         self.create_subscription(Twist,            '/cmd_vel_teleop', self._teleop_cb, 10)
+
+        # manual manipulator requests (forwarded only while in teleop)
+        self.create_subscription(Int32,             '/gripper_cmd', self._gripper_cmd_cb, 10)
+        self.create_subscription(Int32,             '/hopper_cmd',  self._hopper_cmd_cb,  10)
+        self.create_subscription(Float32MultiArray, '/arm_cmd',     self._arm_cmd_cb,     10)
 
         self.create_timer(1.0 / p('loop_hz'), self._tick)
         self.get_logger().info('state_machine ready  state=IDLE')
@@ -184,6 +194,22 @@ class StateMachineNode(Node):
     def _teleop_cb(self, msg: Twist):
         self._teleop_twist     = msg
         self._teleop_recv_time = self.get_clock().now()
+
+    # manual manipulator commands — only forwarded to the bridge in teleop
+    def _gripper_cmd_cb(self, msg: Int32):
+        if self.state == State.TELEOP:
+            self.gripper_pub.publish(msg)
+            self._tlog('manip_gripper', f'teleop  gripper -> {msg.data}', 0.3)
+
+    def _hopper_cmd_cb(self, msg: Int32):
+        if self.state == State.TELEOP:
+            self.hopper_pub.publish(msg)
+            self._tlog('manip_hopper', f'teleop  hopper -> {msg.data}', 0.3)
+
+    def _arm_cmd_cb(self, msg: Float32MultiArray):
+        if self.state == State.TELEOP:
+            self.arm_pub.publish(msg)
+            self._tlog('manip_arm', f'teleop  arm -> {list(msg.data)}', 0.3)
 
     # ── main tick ─────────────────────────────────────────────────────────────
     def _tick(self):

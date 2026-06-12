@@ -72,6 +72,7 @@ class STM32BridgeNode(Node):
         self.get_logger().info(f'opening {port} at {baud} baud')
         self.ser = serial.Serial(port, baud, timeout=0.05)
         self.ser_lock = threading.Lock()
+        self._last_speeds = None        # for change-only drive logging
 
         self.create_subscription(Float32MultiArray, '/wheel_speeds', self._drive_cb, 10)
         self.create_subscription(Int32, '/gripper', self._gripper_cb, 10)
@@ -97,14 +98,23 @@ class STM32BridgeNode(Node):
             return
         speeds = [_clamp(int(v * 1000), -1000, 1000) for v in msg.data[:4]]
         self._send(build_packet(CMD_DRIVE, struct.pack('<4h', *speeds)))
+        if speeds != self._last_speeds:        # log only on change (20 Hz stream)
+            self._last_speeds = speeds
+            if any(speeds):
+                self.get_logger().info(
+                    f'drive  FL={speeds[0]} FR={speeds[1]} RL={speeds[2]} RR={speeds[3]}')
+            else:
+                self.get_logger().info('drive  stop')
 
     def _gripper_cb(self, msg: Int32):
         pos = _clamp(int(msg.data), 0, 100)
         self._send(build_packet(CMD_GRIPPER, bytes([pos])))
+        self.get_logger().info(f"gripper -> {pos} ({'open' if pos <= 15 else 'close'})")
 
     def _hopper_cb(self, msg: Int32):
         act = _clamp(int(msg.data), 0, 2)
         self._send(build_packet(CMD_HOPPER, bytes([act])))
+        self.get_logger().info(f"hopper -> {('stop', 'extend', 'retract')[act]}")
 
     def _arm_cb(self, msg: Float32MultiArray):
         if len(msg.data) < 3:
@@ -113,6 +123,9 @@ class STM32BridgeNode(Node):
         angles = [_clamp(int(a * 10), -32768, 32767) for a in msg.data[:3]]  # tenths-deg
         t = int(msg.data[3]) if len(msg.data) >= 4 else ARM_DEFAULT_TIME_MS
         self._send(build_packet(CMD_ARM, struct.pack('<3hH', *angles, t & 0xFFFF)))
+        self.get_logger().info(
+            f'arm -> shoulder={angles[0] // 10} elbow={angles[1] // 10} '
+            f'wrist={angles[2] // 10} deg ({t}ms)')
 
     # ── rx ───────────────────────────────────────────────────────────────
     def _read_loop(self):
